@@ -20,6 +20,13 @@ typedef struct room {
   int state; // 0 la dang choi, 1 la chua choi
 } room;
 
+extern int online_number;
+extern int room_number;
+extern room roomlist[50];
+extern playerinfo list[100];
+extern int number_of_info;
+extern playerinfo online_player_list[20];
+
 typedef struct data {
   int i;
   char c;
@@ -70,8 +77,13 @@ typedef struct {
 } Response;
 
 // core function
-int receiveData(int socket, Request *buff, int size, int flags);
-int sendData(int socket, Request *buff, int size, int flags);
+int receiveData(int socket, char *buffer);
+int sendData(int socket, char *msg);
+
+// ham them xoa phong
+int findUser(char *username);
+void createRoom(playerinfo player, int roomnumber);
+void addPlayerToRoom(playerinfo player, int roomnumber);
 
 // int sendMessage(int socket, Response *msg, int size, int flags);
 // int receiveMessage(int socket, Response *msg, int size, int flags);
