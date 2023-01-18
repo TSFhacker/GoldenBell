@@ -18,7 +18,6 @@
 struct sockaddr_in server_addr;
 int bytes_sent, bytes_received;
 int client_sock;
-Data data;
 
 // cua so login
 GtkBuilder *builder;
@@ -50,13 +49,18 @@ void on_loginBtn_clicked();
 GtkTreeIter curIter;
 GtkListStore *store;
 int online_number = 0;
+int room_number = 0;
+room roomlist[50];
 
 GtkTreeModel *create_model() {
   gint i = 0;
-  store = gtk_list_store_new(2, G_TYPE_INT, G_TYPE_INT);
-  for (i = 0; i < online_number; ++i) {
+  store = gtk_list_store_new(3, G_TYPE_STRING, G_TYPE_INT, G_TYPE_INT);
+  for (i = 0; i < room_number; ++i) {
+    printf("room number %d\n", i);
     gtk_list_store_append(store, &curIter);
-    gtk_list_store_set(store, &curIter, 0, 1, 1, online_number, -1);
+    gtk_list_store_set(store, &curIter, 0, roomlist[i].list[0].username, 1,
+                       roomlist[i].list[0].username, 2,
+                       roomlist[i].player_number, -1);
   }
   return GTK_TREE_MODEL(store);
 }
@@ -68,12 +72,42 @@ void add_room_columns(GtkTreeView *treeview) {
 
   GtkTreeModel *model = gtk_tree_view_get_model(treeview);
   renderer = gtk_cell_renderer_text_new();
-  column1 = gtk_tree_view_column_new_with_attributes("Rank", renderer, "text",
+  column1 = gtk_tree_view_column_new_with_attributes("Host", renderer, "text",
                                                      0, NULL);
-  column2 = gtk_tree_view_column_new_with_attributes("Number of players",
-                                                     renderer, "text", 1, NULL);
+  column2 = gtk_tree_view_column_new_with_attributes("Rank", renderer, "text",
+                                                     1, NULL);
+  column3 = gtk_tree_view_column_new_with_attributes("Players", renderer,
+                                                     "text", 2, NULL);
   gtk_tree_view_append_column(treeview, column1);
   gtk_tree_view_append_column(treeview, column2);
+  gtk_tree_view_append_column(treeview, column3);
+}
+
+void listenAndPrint(int socket) {
+  char buffer[1024];
+  while (1) {
+    int bytes_received = recv(socket, buffer, 24, 0);
+    buffer[bytes_received] = '\0';
+    printf("%s\n", buffer);
+    if (bytes_received <= 0)
+      break;
+    if (strcmp(buffer, "CREATE_ROOM_SUCCESSFULLY") == 0) {
+      printf("create successfully\n");
+      // send(client_sock, "creating", 8, 0);
+      bytes_received = recv(socket, buffer, 1024, 0);
+      buffer[bytes_received] = '\0';
+      printf("increasing room: %s\n", buffer);
+      strcpy(roomlist[room_number].list[0].username, buffer);
+      roomlist[room_number].player_number = 1;
+      room_number++;
+      gtk_tree_view_set_model(GTK_TREE_VIEW(roomview),
+                              GTK_TREE_MODEL(create_model()));
+      if (room_number == 1)
+        add_room_columns(GTK_TREE_VIEW(roomview));
+    }
+  }
+
+  close(socket);
 }
 
 int main(int argc, char *argv[]) {
@@ -83,8 +117,9 @@ int main(int argc, char *argv[]) {
     return 1;
   }
   server_addr.sin_family = AF_INET;
-  server_addr.sin_port = htons(5550);
+  server_addr.sin_port = htons(5551);
   server_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
+
   gtk_init(&argc, &argv);
   builder = gtk_builder_new_from_file(argv[1]);
   loginWindow = GTK_WIDGET(gtk_builder_get_object(builder, "loginWindow"));
@@ -99,7 +134,6 @@ int main(int argc, char *argv[]) {
   loginBtn = GTK_WIDGET(gtk_builder_get_object(builder, "loginBtn"));
 
   gtk_widget_set_sensitive(loginBtn, FALSE);
-
   gtk_widget_show(loginWindow);
   gtk_main();
   return 0;
@@ -130,6 +164,7 @@ void on_loginBtn_clicked() {
     return;
   }
 
+  // printf("%s\n", username);
   bytes_sent = send(client_sock, username, strlen(username), 0);
   if (bytes_sent <= 0) {
     printf("\nConnection closed!\n");
@@ -148,16 +183,34 @@ void on_loginBtn_clicked() {
   if (strcmp(result, "Wrong username or password") == 0) {
     gtk_label_set_text(GTK_LABEL(notiLabel1), (const gchar *)result);
   } else {
+    gtk_widget_hide(loginWindow);
     bytes_sent = send(client_sock, "ready", 5, 0);
     if (bytes_sent <= 0) {
       printf("\nConnection closed!\n");
     }
     printf("ready\n");
-    bytes_received = read(client_sock, &online_number, sizeof(online_number));
+    bytes_received = read(client_sock, &room_number, sizeof(room_number));
     if (bytes_received <= 0) {
       printf("\nConnection closed!\n");
     }
-    online_number = ntohl(online_number);
+
+    room_number = ntohl(room_number);
+    printf("There are %d rooms\n", room_number);
+
+    for (int i = 0; i < room_number; i++) {
+      bytes_received = read(client_sock, &roomlist[i], sizeof(room));
+      if (bytes_received <= 0) {
+        printf("\nConnection closed!\n");
+      }
+      printf("received room info\n");
+      printf("%s\n", roomlist[i].list[0].username);
+      printf("%d\n", roomlist[i].player_number);
+    }
+    printf("ready2\n");
+    pthread_t id;
+    pthread_create(&id, NULL, (void *)listenAndPrint,
+                   (void *)(intptr_t)client_sock);
+
     gtk_label_set_text(GTK_LABEL(notiLabel1),
                        (const gchar *)"Log in successfully");
     builder = gtk_builder_new_from_file("client.glade");
@@ -170,7 +223,8 @@ void on_loginBtn_clicked() {
                      "NULL");
     roomview = GTK_TREE_VIEW(gtk_builder_get_object(builder, "roomview"));
 
-    if (online_number > 0) {
+    printf("showed room info\n");
+    if (room_number > 0) {
       gtk_tree_view_set_model(GTK_TREE_VIEW(roomview),
                               GTK_TREE_MODEL(create_model()));
       add_room_columns(GTK_TREE_VIEW(roomview));
@@ -178,20 +232,32 @@ void on_loginBtn_clicked() {
 
     gtk_widget_set_sensitive(loginWindow, FALSE);
     gtk_widget_show(mainwindow);
+    printf("showed room info\n");
   }
 }
 
+void on_createroomwindow_destroy() {
+  gtk_widget_set_sensitive(mainwindow, TRUE);
+  printf("Destroyed\n");
+}
 void on_createroomBtn_clicked() {
+  bytes_sent = send(client_sock, "CREATE_ROOM", 11, 0);
   if (bytes_sent <= 0) {
     printf("\nConnection closed!\n");
   }
+  char buffer[20];
+  // recv(client_sock, buffer, 20, 0);
+  // printf("%s\n", username);
+  send(client_sock, username, strlen(username), 0);
   builder = gtk_builder_new_from_file("client.glade");
   createroomwindow =
       GTK_WIDGET(gtk_builder_get_object(builder, "createroomwindow"));
   createroomlabel =
       GTK_WIDGET(gtk_builder_get_object(builder, "createroomlabel"));
-  char *roomname;
+  // printf("done with the creating 1\n");
+  char roomname[20];
   strcpy(roomname, username);
+  // printf("done with the creating 2\n");
   strcat(roomname, "'s room");
   gtk_label_set_text(GTK_LABEL(createroomlabel), (const gchar *)roomname);
   g_signal_connect(mainwindow, "destroy", G_CALLBACK(on_logoutBtn_clicked),
@@ -205,8 +271,4 @@ void on_createroomBtn_clicked() {
 
   gtk_widget_set_sensitive(mainwindow, FALSE);
   gtk_widget_show(createroomwindow);
-}
-
-void on_createroomwindow_destroy() {
-  gtk_widget_set_sensitive(mainwindow, TRUE);
 }
