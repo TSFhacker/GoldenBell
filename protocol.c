@@ -66,6 +66,7 @@ void createRoom(playerinfo player, int roomnumber) {
   roomlist[room_number].rank = player.rank;
   roomlist[room_number].state = 0;
   roomlist[room_number].player_number = 1;
+  roomlist[room_number].id = roomnumber;
   room_number++;
 }
 
@@ -81,4 +82,29 @@ void addPlayerToRoom(playerinfo player, int roomnumber) {
   roomlist[room_number].list[roomlist[room_number].player_number].socket =
       player.socket;
   roomlist[room_number].player_number++;
+}
+
+void deleteRoom(char *username) {
+  for (int i = 0; i < room_number; i++) {
+    printf("%s %s\n", username, roomlist[i].list[0].username);
+    if (strcmp(username, roomlist[i].list[0].username) == 0) {
+      if (i != room_number - 1) {
+        for (int j = i; j < room_number - 1; j++) {
+          for (int k = 0; k < roomlist[j + 1].player_number; k++) {
+            strcpy(roomlist[j].list[k].username,
+                   roomlist[j + 1].list[k].username);
+            strcpy(roomlist[j].list[k].password,
+                   roomlist[j + 1].list[k].password);
+            roomlist[j].list[k].rank = roomlist[j + 1].list[k].rank;
+            roomlist[j].list[k].socket = roomlist[j + 1].list[k].socket;
+          }
+          roomlist[j].rank = roomlist[j + 1].rank;
+          roomlist[j].state = roomlist[j + 1].state;
+          roomlist[j].player_number = roomlist[j + 1].player_number;
+        }
+        room_number--;
+      } else
+        room_number--;
+    }
+  }
 }

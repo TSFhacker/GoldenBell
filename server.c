@@ -107,10 +107,10 @@ void createThread(int conn_sock) {
   }
   while (1) {
     char buff[20];
-    recv(conn_sock, buff, 20, 0);
+    if (receiveData(conn_sock, buff) == 0)
+      break;
     printf("%s\n", buff);
     if (strcmp(buff, "CREATE_ROOM") == 0) {
-      printf("Creating\n");
       // send(conn_sock, "received", 8, 0);
       if (receiveData(conn_sock, buff) == 0)
         break;
@@ -124,14 +124,21 @@ void createThread(int conn_sock) {
       //     conn_sock;
       // roomlist[room_number].player_number++;
       // room_number++;
-      createRoom(list[findUser(username)], room_number);
+      printf("%s\n", list[findUser(username)].username);
+      createRoom(online_player_list[findUser(username)], room_number);
       broadcast_msg("CREATE_ROOM_SUCCESSFULLY", conn_sock);
       // recv(conn_sock, buff, 20, 0);
       // printf("%s\n", buff);
-      broadcast_playerinfo(list[findUser(username)], conn_sock);
+      broadcast_playerinfo(online_player_list[findUser(username)], conn_sock);
 
       // int converted_number = htonl(room_number);
       // write(conn_sock, &converted_number, sizeof(converted_number));
+    } else if (strcmp(buff, "DELETE_ROOM") == 0) {
+      if (receiveData(conn_sock, buff) == 0)
+        break;
+      deleteRoom(buff);
+      broadcast_msg("DELETE_ROOM_SUCCESSFULLY", conn_sock);
+      broadcast_msg(buff, conn_sock);
     }
   }
 }
@@ -189,7 +196,7 @@ void main() {
 
   bzero(&server, sizeof(server));
   server.sin_family = AF_INET;
-  server.sin_port = htons(5550);
+  server.sin_port = htons(5551);
   server.sin_addr.s_addr =
       htonl(INADDR_ANY); /* INADDR_ANY puts your IP address automatically */
 

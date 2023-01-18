@@ -87,8 +87,7 @@ void listenAndPrint(int socket) {
   while (1) {
     if (receiveData(socket, buffer) == 0)
       break;
-    if (bytes_received <= 0)
-      break;
+    printf("%s\n", buffer);
     if (strcmp(buffer, "CREATE_ROOM_SUCCESSFULLY") == 0) {
       printf("create successfully\n");
       // send(client_sock, "creating", 8, 0);
@@ -103,8 +102,13 @@ void listenAndPrint(int socket) {
       // room_number++;
       gtk_tree_view_set_model(GTK_TREE_VIEW(roomview),
                               GTK_TREE_MODEL(create_model()));
-      if (room_number == 1)
-        add_room_columns(GTK_TREE_VIEW(roomview));
+    } else if (strcmp(buffer, "DELETE_ROOM_SUCCESSFULLY") == 0) {
+      if (receiveData(socket, buffer) == 0)
+        break;
+      deleteRoom(buffer);
+      printf("Current number of rooms: %d\n", room_number);
+      gtk_tree_view_set_model(GTK_TREE_VIEW(roomview),
+                              GTK_TREE_MODEL(create_model()));
     }
   }
 
@@ -118,7 +122,7 @@ int main(int argc, char *argv[]) {
     return 1;
   }
   server_addr.sin_family = AF_INET;
-  server_addr.sin_port = htons(5550);
+  server_addr.sin_port = htons(5551);
   server_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
 
   gtk_init(&argc, &argv);
@@ -225,10 +229,10 @@ void on_loginBtn_clicked() {
     roomview = GTK_TREE_VIEW(gtk_builder_get_object(builder, "roomview"));
 
     printf("showed room info\n");
+    add_room_columns(GTK_TREE_VIEW(roomview));
     if (room_number > 0) {
       gtk_tree_view_set_model(GTK_TREE_VIEW(roomview),
                               GTK_TREE_MODEL(create_model()));
-      add_room_columns(GTK_TREE_VIEW(roomview));
     }
 
     gtk_widget_set_sensitive(loginWindow, FALSE);
@@ -240,9 +244,14 @@ void on_loginBtn_clicked() {
 void on_createroomwindow_destroy() {
   gtk_widget_set_sensitive(mainwindow, TRUE);
   printf("Destroyed\n");
+  if (sendData(client_sock, "DELETE_ROOM") == 0)
+    printf("Error\n");
+  if (sendData(client_sock, username) == 0)
+    printf("Error\n");
 }
 void on_createroomBtn_clicked() {
-  bytes_sent = send(client_sock, "CREATE_ROOM", 11, 0);
+  if (sendData(client_sock, "CREATE_ROOM") == 0)
+    printf("Error\n");
   if (bytes_sent <= 0) {
     printf("\nConnection closed!\n");
   }

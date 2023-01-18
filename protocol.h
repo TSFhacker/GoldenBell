@@ -84,6 +84,7 @@ int sendData(int socket, char *msg);
 int findUser(char *username);
 void createRoom(playerinfo player, int roomnumber);
 void addPlayerToRoom(playerinfo player, int roomnumber);
+void deleteRoom(char *username);
 
 // int sendMessage(int socket, Response *msg, int size, int flags);
 // int receiveMessage(int socket, Response *msg, int size, int flags);
