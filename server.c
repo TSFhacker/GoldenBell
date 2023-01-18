@@ -13,12 +13,12 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-playerinfo list[100];
-int number_of_info = 0;
-playerinfo online_player_list[20];
-int online_number = 0;
-room roomlist[50];
-int room_number = 0;
+// playerinfo list[100];
+// int number_of_info = 0;
+// playerinfo online_player_list[20];
+// int online_number = 0;
+// room roomlist[50];
+// int room_number = 0;
 
 void sig_chld(int signo);
 
@@ -27,7 +27,16 @@ void broadcast_msg(char *msg, int socket) {
   for (int i = 0; i < online_number; i++) {
     if (online_player_list[i].socket == socket)
       continue;
-    send(online_player_list[i].socket, msg, strlen(msg), 0);
+    sendData(online_player_list[i].socket, msg);
+  }
+}
+
+void broadcast_playerinfo(playerinfo player, int socket) {
+  // printf("%s\n", msg);
+  for (int i = 0; i < online_number; i++) {
+    if (online_player_list[i].socket == socket)
+      continue;
+    write(online_player_list[i].socket, &player, sizeof(player));
   }
 }
 
@@ -40,8 +49,8 @@ void broadcast_msg(char *msg, int socket) {
 // }
 
 void createThread(int conn_sock) {
+  int bytes_sent, bytes_received;
   while (1) {
-    int bytes_sent, bytes_received;
     char username[50];
     char password[50];
     // char last_sign_in_try[50];
@@ -77,6 +86,7 @@ void createThread(int conn_sock) {
     // if (bytes_sent <= 0) {
     //   printf("\nConnection closed!\n");
     // }
+
     char buff[20];
     if (count > 0) {
       recv(conn_sock, buff, 10, 0);
@@ -92,26 +102,33 @@ void createThread(int conn_sock) {
       // if (bytes_sent <= 0) {
       //   printf("\nConnection closed!\n");
       // }
+      break;
     }
-
+  }
+  while (1) {
+    char buff[20];
     recv(conn_sock, buff, 20, 0);
+    printf("%s\n", buff);
     if (strcmp(buff, "CREATE_ROOM") == 0) {
+      printf("Creating\n");
       // send(conn_sock, "received", 8, 0);
-      bytes_received = recv(conn_sock, buff, 10, 0);
-      buff[bytes_received] = '\0';
-      printf("%s\n", buff);
+      if (receiveData(conn_sock, buff) == 0)
+        break;
       char username[20];
       strcpy(username, buff);
-      strcpy(roomlist[room_number].list[0].username, username);
-      roomlist[room_number].player_number = 0;
-      roomlist[room_number].list[roomlist[room_number].player_number].socket =
-          conn_sock;
-      roomlist[room_number].player_number++;
-      room_number++;
+      printf("%s\n", username);
+      // strcpy(roomlist[room_number].list[0].username, username);
+      // roomlist[room_number].player_number = 0;
+      // roomlist[room_number].list[roomlist[room_number].player_number].socket
+      // =
+      //     conn_sock;
+      // roomlist[room_number].player_number++;
+      // room_number++;
+      createRoom(list[findUser(username)], room_number);
       broadcast_msg("CREATE_ROOM_SUCCESSFULLY", conn_sock);
       // recv(conn_sock, buff, 20, 0);
       // printf("%s\n", buff);
-      broadcast_msg(username, conn_sock);
+      broadcast_playerinfo(list[findUser(username)], conn_sock);
 
       // int converted_number = htonl(room_number);
       // write(conn_sock, &converted_number, sizeof(converted_number));
@@ -172,7 +189,7 @@ void main() {
 
   bzero(&server, sizeof(server));
   server.sin_family = AF_INET;
-  server.sin_port = htons(5551);
+  server.sin_port = htons(5550);
   server.sin_addr.s_addr =
       htonl(INADDR_ANY); /* INADDR_ANY puts your IP address automatically */
 

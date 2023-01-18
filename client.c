@@ -48,9 +48,9 @@ void on_loginBtn_clicked();
 
 GtkTreeIter curIter;
 GtkListStore *store;
-int online_number = 0;
-int room_number = 0;
-room roomlist[50];
+// int online_number = 0;
+// int room_number = 0;
+// room roomlist[50];
 
 GtkTreeModel *create_model() {
   gint i = 0;
@@ -59,8 +59,7 @@ GtkTreeModel *create_model() {
     printf("room number %d\n", i);
     gtk_list_store_append(store, &curIter);
     gtk_list_store_set(store, &curIter, 0, roomlist[i].list[0].username, 1,
-                       roomlist[i].list[0].username, 2,
-                       roomlist[i].player_number, -1);
+                       roomlist[i].rank, 2, roomlist[i].player_number, -1);
   }
   return GTK_TREE_MODEL(store);
 }
@@ -86,20 +85,22 @@ void add_room_columns(GtkTreeView *treeview) {
 void listenAndPrint(int socket) {
   char buffer[1024];
   while (1) {
-    int bytes_received = recv(socket, buffer, 24, 0);
-    buffer[bytes_received] = '\0';
-    printf("%s\n", buffer);
+    if (receiveData(socket, buffer) == 0)
+      break;
     if (bytes_received <= 0)
       break;
     if (strcmp(buffer, "CREATE_ROOM_SUCCESSFULLY") == 0) {
       printf("create successfully\n");
       // send(client_sock, "creating", 8, 0);
-      bytes_received = recv(socket, buffer, 1024, 0);
-      buffer[bytes_received] = '\0';
-      printf("increasing room: %s\n", buffer);
-      strcpy(roomlist[room_number].list[0].username, buffer);
-      roomlist[room_number].player_number = 1;
-      room_number++;
+      // bytes_received = recv(socket, buffer, 1024, 0);
+      // buffer[bytes_received] = '\0';
+      playerinfo player;
+      read(client_sock, &player, sizeof(player));
+      printf("increasing room: %s\n", player.username);
+      createRoom(player, room_number);
+      // strcpy(roomlist[room_number].list[0].username, buffer);
+      // roomlist[room_number].player_number = 1;
+      // room_number++;
       gtk_tree_view_set_model(GTK_TREE_VIEW(roomview),
                               GTK_TREE_MODEL(create_model()));
       if (room_number == 1)
@@ -117,7 +118,7 @@ int main(int argc, char *argv[]) {
     return 1;
   }
   server_addr.sin_family = AF_INET;
-  server_addr.sin_port = htons(5551);
+  server_addr.sin_port = htons(5550);
   server_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
 
   gtk_init(&argc, &argv);
@@ -248,7 +249,7 @@ void on_createroomBtn_clicked() {
   char buffer[20];
   // recv(client_sock, buffer, 20, 0);
   // printf("%s\n", username);
-  send(client_sock, username, strlen(username), 0);
+  sendData(client_sock, username);
   builder = gtk_builder_new_from_file("client.glade");
   createroomwindow =
       GTK_WIDGET(gtk_builder_get_object(builder, "createroomwindow"));
