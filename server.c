@@ -13,20 +13,10 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
-// playerinfo list[100];
-// int number_of_info = 0;
-// playerinfo online_player_list[20];
-// int online_number = 0;
-// room roomlist[50];
-// int room_number = 0;
-
 void sig_chld(int signo);
 
-void broadcast_msg(char *msg, int socket) {
-  // printf("%s\n", msg);
+void broadcast_msg_to_all(char *msg) {
   for (int i = 0; i < online_number; i++) {
-    if (online_player_list[i].socket == socket)
-      continue;
     sendData(online_player_list[i].socket, msg);
   }
 }
@@ -40,13 +30,12 @@ void broadcast_playerinfo(playerinfo player, int socket) {
   }
 }
 
-// void broadcast_num(int n, int socket) {
-//   for (int i = 0; i < online_number; i++) {
-//     if (online_player_list[i].socket == socket)
-//       continue;
-//     send(online_player_list[i].socket, , strlen(msg), 0);
-//   }
-// }
+void broadcast_playerinfo_to_all(playerinfo player) {
+  // printf("%s\n", msg);
+  for (int i = 0; i < online_number; i++) {
+    write(online_player_list[i].socket, &player, sizeof(player));
+  }
+}
 
 void createThread(int conn_sock) {
   int bytes_sent, bytes_received;
@@ -69,12 +58,13 @@ void createThread(int conn_sock) {
     // printf("password: %s\n", password);
     int count = 0;
     for (int i = 0; i < number_of_info; i++) {
-      if (strcmp(username, list[i].username) == 0) {
-        if (strcmp(password, list[i].password) == 0) {
+      if (strcmp(username, player_list[i].username) == 0) {
+        if (strcmp(password, player_list[i].password) == 0) {
           strcpy(result, "Hello\0");
           count++;
           strcpy(online_player_list[online_number].username, username);
-          online_player_list[online_number].rank = atoi(username);
+          strcpy(online_player_list[online_number].password, password);
+          online_player_list[online_number].rank = player_list[i].rank;
           online_player_list[online_number].socket = conn_sock;
           online_number++;
         }
@@ -90,55 +80,99 @@ void createThread(int conn_sock) {
     char buff[20];
     if (count > 0) {
       recv(conn_sock, buff, 10, 0);
-      // printf("%s\n", buff);
       int converted_number = htonl(room_number);
       bytes_sent =
           write(conn_sock, &converted_number, sizeof(converted_number));
-      printf("Sent room number\n");
       for (int i = 0; i < room_number; i++) {
         write(conn_sock, &roomlist[i], sizeof(room));
       }
-      printf("Sent room list\n");
-      // if (bytes_sent <= 0) {
-      //   printf("\nConnection closed!\n");
-      // }
       break;
     }
   }
+  printf("Done with authentication\n");
   while (1) {
     char buff[20];
     if (receiveData(conn_sock, buff) == 0)
       break;
     printf("%s\n", buff);
     if (strcmp(buff, "CREATE_ROOM") == 0) {
-      // send(conn_sock, "received", 8, 0);
       if (receiveData(conn_sock, buff) == 0)
         break;
       char username[20];
       strcpy(username, buff);
       printf("%s\n", username);
-      // strcpy(roomlist[room_number].list[0].username, username);
-      // roomlist[room_number].player_number = 0;
-      // roomlist[room_number].list[roomlist[room_number].player_number].socket
-      // =
-      //     conn_sock;
-      // roomlist[room_number].player_number++;
-      // room_number++;
-      printf("%s\n", list[findUser(username)].username);
+      printf("%s\n", player_list[findUser(username)].username);
       createRoom(online_player_list[findUser(username)], room_number);
+      if (sendData(conn_sock, "CREATE_ROOM_SUCCESSFULLY") == 0)
+        break;
       broadcast_msg("CREATE_ROOM_SUCCESSFULLY", conn_sock);
-      // recv(conn_sock, buff, 20, 0);
-      // printf("%s\n", buff);
+      write(conn_sock, &online_player_list[findUser(username)],
+            sizeof(playerinfo));
       broadcast_playerinfo(online_player_list[findUser(username)], conn_sock);
-
-      // int converted_number = htonl(room_number);
-      // write(conn_sock, &converted_number, sizeof(converted_number));
     } else if (strcmp(buff, "DELETE_ROOM") == 0) {
       if (receiveData(conn_sock, buff) == 0)
         break;
       deleteRoom(buff);
       broadcast_msg("DELETE_ROOM_SUCCESSFULLY", conn_sock);
+      if (sendData(conn_sock, "DELETE_ROOM_SUCCESSFULLY") == 0)
+        break;
       broadcast_msg(buff, conn_sock);
+      if (sendData(conn_sock, buff) == 0)
+        break;
+    } else if (strcmp(buff, "JOIN_ROOM") == 0) {
+      if (receiveData(conn_sock, buff) == 0)
+        break;
+      char host[20];
+      strcpy(host, buff);
+      if (receiveData(conn_sock, buff) == 0)
+        break;
+      if (roomlist[findRoomByHost(host)].player_number >= 20) {
+        printf("Room is full!\n");
+        continue;
+      }
+      printf("%s\n", buff);
+      addPlayerToWaitingList(online_player_list[findUser(buff)],
+                             findRoomByHost(host));
+      if (sendData(online_player_list[findUser(host)].socket, "JOIN_ROOM") == 0)
+        break;
+      write(online_player_list[findUser(host)].socket,
+            &online_player_list[findUser(buff)], sizeof(playerinfo));
+    } else if (strcmp(buff, "CANCEL_JOIN_ROOM") == 0) {
+      if (receiveData(conn_sock, buff) == 0)
+        break;
+      char username[20];
+      strcpy(username, buff);
+      if (receiveData(conn_sock, buff) == 0)
+        break;
+      removePlayerFromWaitingList(username, findRoomByHost(buff));
+      if (sendData(online_player_list[findUser(buff)].socket,
+                   "CANCEL_JOIN_ROOM") == 0)
+        break;
+      if (sendData(online_player_list[findUser(buff)].socket, username) == 0)
+        break;
+    } else if (strcmp(buff, "ACCEPT_JOIN_ROOM") == 0) {
+      if (receiveData(conn_sock, buff) == 0)
+        break;
+      char joining_player[20];
+      strcpy(joining_player, buff);
+      if (receiveData(conn_sock, buff) == 0)
+        break;
+      addPlayerToRoom(online_player_list[findUser(joining_player)],
+                      findRoomByHost(buff));
+      removePlayerFromWaitingList(joining_player, findRoomByHost(buff));
+      broadcast_msg_to_all("ACCEPT_JOIN_ROOM_SUCCESSFULLY");
+      broadcast_playerinfo_to_all(online_player_list[findUser(joining_player)]);
+      broadcast_playerinfo_to_all(online_player_list[findUser(buff)]);
+    } else if (strcmp(buff, "REFUSE_JOIN_ROOM") == 0) {
+      if (receiveData(conn_sock, buff) == 0)
+        break;
+      char joining_player[20];
+      strcpy(joining_player, buff);
+      if (receiveData(conn_sock, buff) == 0)
+        break;
+      removePlayerFromWaitingList(joining_player, findRoomByHost(buff));
+      broadcast_msg_to_all("REFUSE_JOIN_ROOM_SUCCESSFULLY");
+      broadcast_msg_to_all(joining_player);
     }
   }
 }
@@ -170,9 +204,9 @@ void main() {
   while ((row = mysql_fetch_row(result))) {
     unsigned long *lengths;
     lengths = mysql_fetch_lengths(result);
-    strcpy(list[number_of_info].username, row[1]);
-    strcpy(list[number_of_info].password, row[2]);
-    list[number_of_info].rank = atoi(row[3]);
+    strcpy(player_list[number_of_info].username, row[1]);
+    strcpy(player_list[number_of_info].password, row[2]);
+    player_list[number_of_info].rank = atoi(row[3]);
     number_of_info++;
     // for(int i = 0; i < num_fields; i++)
     // {

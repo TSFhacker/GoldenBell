@@ -14,6 +14,8 @@ typedef struct player {
 
 typedef struct room {
   playerinfo list[20];
+  playerinfo waiting_list[20];
+  int waiting_number;
   int player_number;
   int rank;
   int id;
@@ -23,7 +25,7 @@ typedef struct room {
 extern int online_number;
 extern int room_number;
 extern room roomlist[50];
-extern playerinfo list[100];
+extern playerinfo player_list[100];
 extern int number_of_info;
 extern playerinfo online_player_list[20];
 
@@ -79,12 +81,16 @@ typedef struct {
 // core function
 int receiveData(int socket, char *buffer);
 int sendData(int socket, char *msg);
+void broadcast_msg(char *msg, int socket);
 
 // ham them xoa phong
 int findUser(char *username);
+int findRoomByHost(char *username);
 void createRoom(playerinfo player, int roomnumber);
 void addPlayerToRoom(playerinfo player, int roomnumber);
 void deleteRoom(char *username);
+void addPlayerToWaitingList(playerinfo player, int roomid);
+void removePlayerFromWaitingList(char *username, int roomid);
 
 // int sendMessage(int socket, Response *msg, int size, int flags);
 // int receiveMessage(int socket, Response *msg, int size, int flags);

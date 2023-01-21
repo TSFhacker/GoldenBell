@@ -12,7 +12,7 @@ int online_number = 0;
 int room_number = 0;
 int number_of_info = 0;
 room roomlist[50];
-playerinfo list[100];
+playerinfo player_list[100];
 playerinfo online_player_list[20];
 
 int receiveData(int socket, char *buffer) {
@@ -49,6 +49,14 @@ int sendData(int socket, char *msg) {
   return 1;
 }
 
+void broadcast_msg(char *msg, int socket) {
+  for (int i = 0; i < online_number; i++) {
+    if (online_player_list[i].socket == socket)
+      continue;
+    sendData(online_player_list[i].socket, msg);
+  }
+}
+
 int findUser(char *username) {
   for (int i = 0; i < online_number; i++) {
     if (strcmp(online_player_list[i].username, username) == 0) {
@@ -58,6 +66,15 @@ int findUser(char *username) {
   return -1; // khong tim duoc user
 }
 
+int findRoomByHost(char *username) {
+  for (int i = 0; i < room_number; i++) {
+    if (strcmp(roomlist[i].list[0].username, username) == 0) {
+      return i;
+    }
+  }
+  return -1; // khong tim duoc phong
+}
+
 void createRoom(playerinfo player, int roomnumber) {
   strcpy(roomlist[room_number].list[0].username, player.username);
   strcpy(roomlist[room_number].list[0].password, player.password);
@@ -65,23 +82,20 @@ void createRoom(playerinfo player, int roomnumber) {
   roomlist[room_number].list[0].socket = player.socket;
   roomlist[room_number].rank = player.rank;
   roomlist[room_number].state = 0;
+  roomlist[room_number].waiting_number = 0;
   roomlist[room_number].player_number = 1;
   roomlist[room_number].id = roomnumber;
   room_number++;
 }
 
-void addPlayerToRoom(playerinfo player, int roomnumber) {
-  strcpy(
-      roomlist[room_number].list[roomlist[room_number].player_number].username,
-      player.username);
-  strcpy(
-      roomlist[room_number].list[roomlist[room_number].player_number].password,
-      player.password);
-  roomlist[room_number].list[roomlist[room_number].player_number].rank =
-      player.rank;
-  roomlist[room_number].list[roomlist[room_number].player_number].socket =
-      player.socket;
-  roomlist[room_number].player_number++;
+void addPlayerToRoom(playerinfo player, int roomid) {
+  strcpy(roomlist[roomid].list[roomlist[roomid].player_number].username,
+         player.username);
+  strcpy(roomlist[roomid].list[roomlist[roomid].player_number].password,
+         player.password);
+  roomlist[roomid].list[roomlist[roomid].player_number].rank = player.rank;
+  roomlist[roomid].list[roomlist[roomid].player_number].socket = player.socket;
+  roomlist[roomid].player_number++;
 }
 
 void deleteRoom(char *username) {
@@ -102,9 +116,44 @@ void deleteRoom(char *username) {
           roomlist[j].state = roomlist[j + 1].state;
           roomlist[j].player_number = roomlist[j + 1].player_number;
         }
-        room_number--;
-      } else
-        room_number--;
+      }
+      room_number--;
+      break;
+    }
+  }
+}
+
+void addPlayerToWaitingList(playerinfo player, int roomid) {
+  strcpy(
+      roomlist[roomid].waiting_list[roomlist[roomid].waiting_number].username,
+      player.username);
+  strcpy(
+      roomlist[roomid].waiting_list[roomlist[roomid].waiting_number].password,
+      player.password);
+  roomlist[roomid].waiting_list[roomlist[roomid].waiting_number].rank =
+      player.rank;
+  roomlist[roomid].waiting_list[roomlist[roomid].waiting_number].socket =
+      player.socket;
+  roomlist[roomid].waiting_number++;
+}
+
+void removePlayerFromWaitingList(char *username, int roomid) {
+  for (int i = 0; i < roomlist[roomid].waiting_number; i++) {
+    if (strcmp(username, roomlist[roomid].waiting_list[i].username) == 0) {
+      if (i != roomlist[roomid].waiting_number - 1) {
+        for (int j = i; j < roomlist[roomid].waiting_number - 1; j++) {
+          strcpy(roomlist[roomid].waiting_list[j].username,
+                 roomlist[roomid].waiting_list[j + 1].username);
+          strcpy(roomlist[roomid].waiting_list[j].password,
+                 roomlist[roomid].waiting_list[j + 1].password);
+          roomlist[roomid].waiting_list[j].rank =
+              roomlist[roomid].waiting_list[j + 1].rank;
+          roomlist[roomid].waiting_list[j].socket =
+              roomlist[roomid].waiting_list[j + 1].socket;
+        }
+      }
+      roomlist[roomid].waiting_number--;
+      break;
     }
   }
 }
