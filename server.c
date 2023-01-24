@@ -218,12 +218,12 @@ void createThread(int conn_sock) {
       printf("%s\n", buff);
       char ans[10];
       strcpy(ans, buff);
-      char *eptr;
-      double result;
-      if (strcmp(ans, "timeout") != 0) {
-        receiveData(conn_sock, buff);
-        result = strtod(buff, &eptr);
-      }
+      // char *eptr;
+      // double result;
+      // if (strcmp(ans, "timeout") != 0) {
+      //   receiveData(conn_sock, buff);
+      //   result = strtod(buff, &eptr);
+      // }
 
       // printf("%s\n", buff);
       // printf("%f\n", result);
@@ -233,12 +233,13 @@ void createThread(int conn_sock) {
         printf("\nConnection closed!\n");
       }
       ques_no = ntohl(ques_no);
+      recv(conn_sock, buff, 8, 0);
       if (n == 0) {
         if (sendData(conn_sock, "WRONG_ANSWER") == 0)
           break;
       } else {
-        if (strcmp(ans, "timeout") != 0)
-          sleep(result);
+        // if (strcmp(ans, "timeout") != 0)
+        //   sleep(result);
         if ((strcmp(ans, "PickA") == 0 &&
              strcmp(questions[ques_no].answer[0],
                     questions[ques_no].correct_answer) == 0) ||
@@ -257,9 +258,9 @@ void createThread(int conn_sock) {
           if (sendData(conn_sock, "WRONG_ANSWER") == 0)
             break;
           roomlist[findRoomBySocket(conn_sock)].on_going_number--;
-          printf("%d %s\n",
-                 roomlist[findRoomBySocket(conn_sock)].on_going_number,
-                 roomlist[findRoomBySocket(conn_sock)].list[0].username);
+          // printf("%d %s\n",
+          //        roomlist[findRoomBySocket(conn_sock)].on_going_number,
+          //        roomlist[findRoomBySocket(conn_sock)].list[0].username);
           if (roomlist[findRoomBySocket(conn_sock)].on_going_number == 0) {
             for (int i = 0;
                  i < roomlist[findRoomBySocket(conn_sock)].player_number; i++) {
@@ -268,10 +269,25 @@ void createThread(int conn_sock) {
                 break;
               write(roomlist[findRoomBySocket(conn_sock)].list[i].socket,
                     &roomlist[findRoomBySocket(conn_sock)], sizeof(room));
+              roomlist[findRoomBySocket(conn_sock)].list[i].correct = 0;
             }
             deleteRoom(roomlist[findRoomBySocket(conn_sock)].list[0].username);
           }
         }
+      }
+    } else if (strcmp(buff, "FINISH") == 0) {
+      roomlist[findRoomBySocket(conn_sock)].on_going_number--;
+      if (roomlist[findRoomBySocket(conn_sock)].on_going_number == 0) {
+        for (int i = 0; i < roomlist[findRoomBySocket(conn_sock)].player_number;
+             i++) {
+          if (sendData(roomlist[findRoomBySocket(conn_sock)].list[i].socket,
+                       "END_GAME") == 0)
+            break;
+          write(roomlist[findRoomBySocket(conn_sock)].list[i].socket,
+                &roomlist[findRoomBySocket(conn_sock)], sizeof(room));
+          roomlist[findRoomBySocket(conn_sock)].list[i].correct = 0;
+        }
+        deleteRoom(roomlist[findRoomBySocket(conn_sock)].list[0].username);
       }
     }
   }

@@ -67,6 +67,7 @@ GtkWidget *CBtn;
 
 // man hinh sau khi tra loi sai
 GtkWidget *loserwindow;
+GtkWidget *finishlabel;
 
 // man hinh ket qua
 GtkWidget *resultwindow;
@@ -148,6 +149,7 @@ void timer(int socket) {
     nanosleep(&ts, &ts);
     // printf("\r %d %d\n", s, ms);
   }
+  send(socket, "continue", 8, 0);
   pthread_exit(NULL);
 }
 void listenAndPrint(int socket) {
@@ -237,8 +239,6 @@ void listenAndPrint(int socket) {
                               GTK_TREE_MODEL(store));
     } else if (strcmp(buffer, "ACCEPT_JOIN_ROOM_SUCCESSFULLY") == 0) {
       playerinfo join, invite;
-      // join = (playerinfo *)malloc(sizeof(playerinfo));
-      // invite = (playerinfo *)malloc(sizeof(playerinfo));
       read(client_sock, &join, sizeof(join));
       read(client_sock, &invite, sizeof(invite));
       addPlayerToRoom(join, findRoomByHost(invite.username));
@@ -322,29 +322,47 @@ void listenAndPrint(int socket) {
       pthread_t id;
       pthread_create(&id, NULL, (void *)timer, (void *)(intptr_t)client_sock);
     } else if (strcmp(buffer, "CORRECT_ANSWER") == 0) {
-      continue_timer = 1;
-      gtk_label_set_text(GTK_LABEL(timerlabel), (const gchar *)"20");
-      printf("Correct answer\n");
-      current_question++;
-      gtk_widget_set_sensitive(ABtn, TRUE);
-      gtk_widget_set_sensitive(BBtn, TRUE);
-      gtk_widget_set_sensitive(CBtn, TRUE);
-      read(client_sock, &questions[current_question], sizeof(question));
-      gtk_label_set_text(GTK_LABEL(questionlabel),
-                         (const gchar *)questions[current_question].content);
-      gtk_button_set_label(
-          GTK_BUTTON(ABtn),
-          (const gchar *)questions[current_question].answer[0]);
-      gtk_button_set_label(
-          GTK_BUTTON(BBtn),
-          (const gchar *)questions[current_question].answer[1]);
-      gtk_button_set_label(
-          GTK_BUTTON(CBtn),
-          (const gchar *)questions[current_question].answer[2]);
-      if (sendData(client_sock, "READY_TO_ANSWER") == 0)
-        printf("Error\n");
-      pthread_t id;
-      pthread_create(&id, NULL, (void *)timer, (void *)(intptr_t)client_sock);
+      if (current_question == 20) {
+        gtk_widget_destroy(quizwindow);
+        builder = gtk_builder_new_from_file("client.glade");
+        loserwindow =
+            GTK_WIDGET(gtk_builder_get_object(builder, "loserwindow"));
+        finishlabel =
+            GTK_WIDGET(gtk_builder_get_object(builder, "finishlabel"));
+        // gtk_tree_view_set_model(GTK_TREE_VIEW(roomview),
+        //                         GTK_TREE_MODEL(create_model()));
+        gtk_label_set_text(
+            GTK_LABEL(finishlabel),
+            (const gchar *)"You have answered all the questions");
+        gtk_widget_show(loserwindow);
+        if (sendData(socket, "FINISH") == 0)
+          printf("Error\n");
+      } else {
+        continue_timer = 1;
+        gtk_label_set_text(GTK_LABEL(timerlabel), (const gchar *)"20");
+        printf("Correct answer\n");
+        current_question++;
+        gtk_widget_set_sensitive(ABtn, TRUE);
+        gtk_widget_set_sensitive(BBtn, TRUE);
+        gtk_widget_set_sensitive(CBtn, TRUE);
+        read(client_sock, &questions[current_question], sizeof(question));
+        gtk_label_set_text(GTK_LABEL(questionlabel),
+                           (const gchar *)questions[current_question].content);
+        gtk_button_set_label(
+            GTK_BUTTON(ABtn),
+            (const gchar *)questions[current_question].answer[0]);
+        gtk_button_set_label(
+            GTK_BUTTON(BBtn),
+            (const gchar *)questions[current_question].answer[1]);
+        gtk_button_set_label(
+            GTK_BUTTON(CBtn),
+            (const gchar *)questions[current_question].answer[2]);
+        if (sendData(client_sock, "READY_TO_ANSWER") == 0)
+          printf("Error\n");
+        pthread_t id;
+        pthread_create(&id, NULL, (void *)timer, (void *)(intptr_t)client_sock);
+      }
+
     } else if (strcmp(buffer, "WRONG_ANSWER") == 0) {
       gtk_widget_destroy(quizwindow);
       builder = gtk_builder_new_from_file("client.glade");
@@ -353,6 +371,7 @@ void listenAndPrint(int socket) {
       //                         GTK_TREE_MODEL(create_model()));
       gtk_widget_show(loserwindow);
     } else if (strcmp(buffer, "END_GAME") == 0) {
+      current_question = 0;
       room a;
       read(socket, &a, sizeof(room));
       gtk_widget_destroy(loserwindow);
@@ -669,11 +688,7 @@ void on_startBtn_clicked() {
 void on_ABtn_clicked() {
   // printf("Pick A\n");
   continue_timer = 0;
-  char time[6];
-  sprintf(time, "%d.%d", s, ms);
   if (sendData(client_sock, "PickA") == 0)
-    printf("Error\n");
-  if (sendData(client_sock, time) == 0)
     printf("Error\n");
   int converted_number = htonl(current_question);
   write(client_sock, &converted_number, sizeof(converted_number));
@@ -686,10 +701,6 @@ void on_BBtn_clicked() {
   continue_timer = 0;
   if (sendData(client_sock, "PickB") == 0)
     printf("Error\n");
-  char time[6];
-  sprintf(time, "%d.%d", s, ms);
-  if (sendData(client_sock, time) == 0)
-    printf("Error\n");
   int converted_number = htonl(current_question);
   write(client_sock, &converted_number, sizeof(converted_number));
   gtk_widget_set_sensitive(ABtn, FALSE);
@@ -701,10 +712,10 @@ void on_CBtn_clicked() {
   continue_timer = 0;
   if (sendData(client_sock, "PickC") == 0)
     printf("Error\n");
-  char time[6];
-  sprintf(time, "%d.%d", s, ms);
-  if (sendData(client_sock, time) == 0)
-    printf("Error\n");
+  // char time[6];
+  // sprintf(time, "%d.%d", s, ms);
+  // if (sendData(client_sock, time) == 0)
+  //   printf("Error\n");
   int converted_number = htonl(current_question);
   write(client_sock, &converted_number, sizeof(converted_number));
   gtk_widget_set_sensitive(ABtn, FALSE);
