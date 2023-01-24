@@ -10,6 +10,7 @@ typedef struct player {
   char password[50];
   int rank;
   int socket;
+  int correct;
 } playerinfo;
 
 typedef struct room {
@@ -17,10 +18,17 @@ typedef struct room {
   playerinfo waiting_list[20];
   int waiting_number;
   int player_number;
+  int on_going_number;
   int rank;
   int id;
   int state; // 0 la dang choi, 1 la chua choi
 } room;
+
+typedef struct question {
+  char content[100];
+  char answer[3][100];
+  char correct_answer[100];
+} question;
 
 extern int online_number;
 extern int room_number;
@@ -28,6 +36,9 @@ extern room roomlist[50];
 extern playerinfo player_list[100];
 extern int number_of_info;
 extern playerinfo online_player_list[20];
+extern question questions[30];
+extern int question_number;
+extern int current_question;
 
 typedef struct data {
   int i;
@@ -85,7 +96,9 @@ void broadcast_msg(char *msg, int socket);
 
 // ham them xoa phong
 int findUser(char *username);
+void addPoint(int socket);
 int findRoomByHost(char *username);
+int findRoomBySocket(int socket);
 void createRoom(playerinfo player, int roomnumber);
 void addPlayerToRoom(playerinfo player, int roomnumber);
 void deleteRoom(char *username);

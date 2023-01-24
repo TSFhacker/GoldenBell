@@ -14,6 +14,9 @@ int number_of_info = 0;
 room roomlist[50];
 playerinfo player_list[100];
 playerinfo online_player_list[20];
+question questions[30];
+int question_number = 0;
+int current_question = 0;
 
 int receiveData(int socket, char *buffer) {
   int n;
@@ -66,10 +69,40 @@ int findUser(char *username) {
   return -1; // khong tim duoc user
 }
 
+int findUserBySocket(int socket) {
+  for (int i = 0; i < online_number; i++) {
+    if (online_player_list[i].socket == socket) {
+      return i;
+    }
+  }
+  return -1; // khong tim duoc user
+}
+
+void addPoint(int socket) {
+  for (int i = 0; i < room_number; i++) {
+    for (int j = 0; j < roomlist[i].player_number; j++) {
+      if (roomlist[i].list[j].socket == socket) {
+        roomlist[i].list[j].correct++;
+      }
+    }
+  }
+}
+
 int findRoomByHost(char *username) {
   for (int i = 0; i < room_number; i++) {
     if (strcmp(roomlist[i].list[0].username, username) == 0) {
       return i;
+    }
+  }
+  return -1; // khong tim duoc phong
+}
+
+int findRoomBySocket(int socket) {
+  for (int i = 0; i < room_number; i++) {
+    for (int j = 0; j < roomlist[i].player_number; j++) {
+      if (roomlist[i].list[j].socket == socket) {
+        return i;
+      }
     }
   }
   return -1; // khong tim duoc phong
@@ -115,6 +148,8 @@ void deleteRoom(char *username) {
           roomlist[j].rank = roomlist[j + 1].rank;
           roomlist[j].state = roomlist[j + 1].state;
           roomlist[j].player_number = roomlist[j + 1].player_number;
+          roomlist[j].waiting_number = roomlist[j + 1].waiting_number;
+          roomlist[j].on_going_number = roomlist[j + 1].on_going_number;
         }
       }
       room_number--;

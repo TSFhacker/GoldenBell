@@ -69,6 +69,7 @@
             <property name="visible">True</property>
             <property name="can-focus">True</property>
             <property name="receives-default">True</property>
+            <signal name="clicked" handler="on_startBtn_clicked" swapped="no"/>
           </object>
           <packing>
             <property name="x">241</property>
@@ -135,6 +136,7 @@
                 <property name="visible">True</property>
                 <property name="can-focus">True</property>
                 <property name="receives-default">True</property>
+                <signal name="clicked" handler="on_refusejoinBtn_clicked" swapped="no"/>
               </object>
               <packing>
                 <property name="expand">True</property>
@@ -248,7 +250,7 @@
           <object class="GtkButton" id="loginBtn">
             <property name="label" translatable="yes">Login</property>
             <property name="width-request">100</property>
-            <property name="height-request">80</property>
+            <property name="height-request">56</property>
             <property name="visible">True</property>
             <property name="can-focus">True</property>
             <property name="receives-default">True</property>
@@ -268,6 +270,37 @@
           </object>
           <packing>
             <property name="y">52</property>
+          </packing>
+        </child>
+      </object>
+    </child>
+  </object>
+  <object class="GtkWindow" id="loserwindow">
+    <property name="can-focus">False</property>
+    <child>
+      <object class="GtkFixed">
+        <property name="visible">True</property>
+        <property name="can-focus">False</property>
+        <child>
+          <object class="GtkLabel">
+            <property name="width-request">440</property>
+            <property name="height-request">146</property>
+            <property name="visible">True</property>
+            <property name="can-focus">False</property>
+            <property name="label" translatable="yes">		You have lost
+Waiting for others to finish</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkSpinner">
+            <property name="width-request">100</property>
+            <property name="height-request">80</property>
+            <property name="visible">True</property>
+            <property name="can-focus">False</property>
+          </object>
+          <packing>
+            <property name="x">166</property>
+            <property name="y">95</property>
           </packing>
         </child>
       </object>
@@ -376,6 +409,166 @@
             <property name="can-focus">False</property>
             <property name="label" translatable="yes">Waiting for the game to start</property>
           </object>
+        </child>
+        <child>
+          <object class="GtkSpinner">
+            <property name="width-request">100</property>
+            <property name="height-request">80</property>
+            <property name="visible">True</property>
+            <property name="can-focus">False</property>
+          </object>
+          <packing>
+            <property name="x">166</property>
+            <property name="y">95</property>
+          </packing>
+        </child>
+      </object>
+    </child>
+  </object>
+  <object class="GtkWindow" id="quizwindow">
+    <property name="can-focus">False</property>
+    <child>
+      <object class="GtkFixed">
+        <property name="visible">True</property>
+        <property name="can-focus">False</property>
+        <child>
+          <object class="GtkLabel" id="questionlabel">
+            <property name="width-request">354</property>
+            <property name="height-request">146</property>
+            <property name="visible">True</property>
+            <property name="can-focus">False</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkButton" id="ABtn">
+            <property name="label" translatable="yes">A</property>
+            <property name="width-request">100</property>
+            <property name="height-request">52</property>
+            <property name="visible">True</property>
+            <property name="can-focus">True</property>
+            <property name="receives-default">True</property>
+            <signal name="clicked" handler="on_ABtn_clicked" swapped="no"/>
+          </object>
+          <packing>
+            <property name="x">18</property>
+            <property name="y">174</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkButton" id="BBtn">
+            <property name="label" translatable="yes">B</property>
+            <property name="width-request">100</property>
+            <property name="height-request">51</property>
+            <property name="visible">True</property>
+            <property name="can-focus">True</property>
+            <property name="receives-default">True</property>
+            <signal name="clicked" handler="on_BBtn_clicked" swapped="no"/>
+          </object>
+          <packing>
+            <property name="x">170</property>
+            <property name="y">175</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkButton" id="CBtn">
+            <property name="label" translatable="yes">C</property>
+            <property name="width-request">100</property>
+            <property name="height-request">53</property>
+            <property name="visible">True</property>
+            <property name="can-focus">True</property>
+            <property name="receives-default">True</property>
+            <signal name="clicked" handler="on_CBtn_clicked" swapped="no"/>
+          </object>
+          <packing>
+            <property name="x">324</property>
+            <property name="y">174</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkLabel" id="timerlabel">
+            <property name="width-request">100</property>
+            <property name="height-request">80</property>
+            <property name="visible">True</property>
+            <property name="can-focus">False</property>
+          </object>
+          <packing>
+            <property name="x">324</property>
+          </packing>
+        </child>
+      </object>
+    </child>
+  </object>
+  <object class="GtkWindow" id="resultwindow">
+    <property name="can-focus">False</property>
+    <child>
+      <object class="GtkFixed">
+        <property name="visible">True</property>
+        <property name="can-focus">False</property>
+        <child>
+          <object class="GtkLabel">
+            <property name="width-request">482</property>
+            <property name="height-request">50</property>
+            <property name="visible">True</property>
+            <property name="can-focus">False</property>
+            <property name="label" translatable="yes">RESULT</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkButton" id="endgameBtn">
+            <property name="label" translatable="yes">Leave room</property>
+            <property name="width-request">119</property>
+            <property name="height-request">50</property>
+            <property name="visible">True</property>
+            <property name="can-focus">True</property>
+            <property name="receives-default">True</property>
+            <signal name="clicked" handler="on_endgameBtn_clicked" swapped="no"/>
+          </object>
+          <packing>
+            <property name="x">177</property>
+            <property name="y">500</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkStack">
+            <property name="width-request">483</property>
+            <property name="height-request">442</property>
+            <property name="visible">True</property>
+            <property name="can-focus">False</property>
+            <child>
+              <object class="GtkFixed">
+                <property name="visible">True</property>
+                <property name="can-focus">False</property>
+                <child>
+                  <object class="GtkScrolledWindow">
+                    <property name="width-request">483</property>
+                    <property name="height-request">437</property>
+                    <property name="visible">True</property>
+                    <property name="can-focus">True</property>
+                    <property name="shadow-type">in</property>
+                    <child>
+                      <object class="GtkTreeView" id="resultview">
+                        <property name="visible">True</property>
+                        <property name="can-focus">True</property>
+                        <child internal-child="selection">
+                          <object class="GtkTreeSelection"/>
+                        </child>
+                      </object>
+                    </child>
+                  </object>
+                  <packing>
+                    <property name="y">5</property>
+                  </packing>
+                </child>
+              </object>
+              <packing>
+                <property name="name">page0</property>
+                <property name="title" translatable="yes">page0</property>
+              </packing>
+            </child>
+          </object>
+          <packing>
+            <property name="y">56</property>
+          </packing>
         </child>
       </object>
     </child>
