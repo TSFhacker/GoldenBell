@@ -465,10 +465,11 @@ void on_loginBtn_clicked() {
     printf("\nConnection closed!\n");
   }
   char result[50];
-  bytes_received = recv(client_sock, result, 50, 0);
-  result[bytes_received] = '\0';
+  if (receiveData(client_sock, result) == 0)
+    printf("Error");
 
-  if (strcmp(result, "Wrong username or password") == 0) {
+  if (strcmp(result, "Wrong username or password") == 0 ||
+      strcmp(result, "This account has already been logged in") == 0) {
     gtk_label_set_text(GTK_LABEL(notiLabel1), (const gchar *)result);
   } else {
     gtk_widget_hide(loginWindow);

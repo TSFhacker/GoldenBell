@@ -66,9 +66,10 @@ void createThread(int conn_sock) {
     password[bytes_received] = '\0';
     // printf("password: %s\n", password);
     int count = 0;
-    for (int i = 0; i < number_of_info; i++) {
-      if (strcmp(username, player_list[i].username) == 0) {
-        if (strcmp(password, player_list[i].password) == 0) {
+    if (checkLogin(username) == 0) {
+      for (int i = 0; i < number_of_info; i++) {
+        if (strcmp(username, player_list[i].username) == 0 &&
+            strcmp(password, player_list[i].password) == 0) {
           strcpy(result, "Hello\0");
           count++;
           strcpy(online_player_list[online_number].username, username);
@@ -79,10 +80,13 @@ void createThread(int conn_sock) {
           online_number++;
         }
       }
+      if (count == 0)
+        strcpy(result, "Wrong username or password\0");
+    } else {
+      strcpy(result, "This account has already been logged in");
     }
-    if (count == 0)
-      strcpy(result, "Wrong username or password\0");
-    bytes_sent = send(conn_sock, result, strlen(result), 0);
+    if (sendData(conn_sock, result) == 0)
+      break;
     // if (bytes_sent <= 0) {
     //   printf("\nConnection closed!\n");
     // }

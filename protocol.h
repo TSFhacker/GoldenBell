@@ -93,6 +93,7 @@ typedef struct {
 int receiveData(int socket, char *buffer);
 int sendData(int socket, char *msg);
 void broadcast_msg(char *msg, int socket);
+int checkLogin(char *username);
 
 // ham them xoa phong
 int findUser(char *username);

@@ -60,6 +60,15 @@ void broadcast_msg(char *msg, int socket) {
   }
 }
 
+int checkLogin(char *username) {
+  for (int i = 0; i < online_number; i++) {
+    if (strcmp(online_player_list[i].username, username) == 0) {
+      return 1;
+    }
+  }
+  return 0;
+}
+
 int findUser(char *username) {
   for (int i = 0; i < online_number; i++) {
     if (strcmp(online_player_list[i].username, username) == 0) {
