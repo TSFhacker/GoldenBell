@@ -21,14 +21,14 @@ int sin_size;
 int bytes_sent, bytes_received;
 fd_set rset;
 
-void sig_chld(int signo);
-
+// truyen thong tin cho tat ca
 void broadcast_msg_to_all(char *msg) {
   for (int i = 0; i < online_number; i++) {
     sendData(online_player_list[i].socket, msg);
   }
 }
 
+// truyen thong tin nguoi choi
 void broadcast_playerinfo(playerinfo player, int socket) {
   // printf("%s\n", msg);
   for (int i = 0; i < online_number; i++) {
@@ -38,6 +38,7 @@ void broadcast_playerinfo(playerinfo player, int socket) {
   }
 }
 
+// truyen thong tin nguoi choi cho tat ca client
 void broadcast_playerinfo_to_all(playerinfo player) {
   // printf("%s\n", msg);
   for (int i = 0; i < online_number; i++) {
@@ -45,9 +46,11 @@ void broadcast_playerinfo_to_all(playerinfo player) {
   }
 }
 
+// tao 1 luong moi voi moi client ket noi
 void createThread(int conn_sock) {
   int bytes_sent, bytes_received;
   printf("%d\n", conn_sock);
+  // authentication
   while (1) {
     char username[50];
     char password[50];
@@ -103,7 +106,8 @@ void createThread(int conn_sock) {
       break;
     }
   }
-  printf("Done with authentication\n");
+  // printf("Done with authentication\n");
+  // Nhan thong tin tu client de xu ly
   while (1) {
     char buff[20];
     if (receiveData(conn_sock, buff) == 0)
@@ -316,6 +320,7 @@ void main() {
   int num_fields = mysql_num_fields(result);
 
   MYSQL_ROW row;
+  // luu thong tin tu database
   while ((row = mysql_fetch_row(result))) {
     unsigned long *lengths;
     lengths = mysql_fetch_lengths(result);
@@ -397,13 +402,4 @@ void main() {
   close(conn_sock);
   close(listen_sock);
   return;
-}
-
-void sig_chld(int signo) {
-  pid_t pid;
-  int stat;
-
-  /* Wait the child process terminate */
-  while ((pid = waitpid(-1, &stat, WNOHANG)) > 0)
-    printf("\nChild %d terminated\n", pid);
 }

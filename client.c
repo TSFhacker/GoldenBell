@@ -118,8 +118,8 @@ void add_room_columns(GtkTreeView *treeview) {
 
 int continue_timer = 1;
 int s, ms;
-// tao mot luong de nghe tin nhan tu server
 
+// Timer cho phan tra loi cau hoi
 void timer(int socket) {
   pthread_detach(pthread_self());
   struct timespec ts;
@@ -152,6 +152,8 @@ void timer(int socket) {
   send(socket, "continue", 8, 0);
   pthread_exit(NULL);
 }
+
+// Luong song song de xu ly thong tin tu server
 void listenAndPrint(int socket) {
   pthread_detach(pthread_self());
   char buffer[100];
@@ -418,7 +420,7 @@ void exit_main() {
 }
 
 int main(int argc, char *argv[]) {
-
+  // yeu cau nhap nhu sau
   if (argc < 2) {
     g_print("Usage: ./client ./client.glade\n");
     return 1;
@@ -427,6 +429,7 @@ int main(int argc, char *argv[]) {
   server_addr.sin_port = htons(5551);
   server_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
 
+  // Hien thi man hinh login
   gtk_init(&argc, &argv);
   builder = gtk_builder_new_from_file(argv[1]);
   loginWindow = GTK_WIDGET(gtk_builder_get_object(builder, "loginWindow"));
@@ -445,6 +448,7 @@ int main(int argc, char *argv[]) {
   return 0;
 }
 
+// Xu ly khi co event:
 void on_logoutBtn_clicked() {
   gtk_widget_destroy(mainwindow);
   gtk_widget_show(loginWindow);
@@ -510,16 +514,14 @@ void on_loginBtn_clicked() {
       if (bytes_received <= 0) {
         printf("\nConnection closed!\n");
       }
-      // printf("received room info\n");
-      // printf("%s\n", roomlist[i].list[0].username);
-      // printf("%d\n", roomlist[i].player_number);
     }
 
-    printf("ready2\n");
+    // Tao ra 1 luong chay song song de lang nghe thong tin tu server
     pthread_t id;
     pthread_create(&id, NULL, (void *)listenAndPrint,
                    (void *)(intptr_t)client_sock);
 
+    // Hien thi man hinh chinh
     gtk_label_set_text(GTK_LABEL(notiLabel1),
                        (const gchar *)"Log in successfully");
     builder = gtk_builder_new_from_file("client.glade");
@@ -538,7 +540,6 @@ void on_loginBtn_clicked() {
       gtk_tree_view_set_model(GTK_TREE_VIEW(roomview),
                               GTK_TREE_MODEL(create_model()));
     }
-
     gtk_widget_set_sensitive(loginWindow, FALSE);
     gtk_widget_show(mainwindow);
   }
@@ -565,10 +566,8 @@ void on_createroomBtn_clicked() {
       GTK_WIDGET(gtk_builder_get_object(builder, "createroomwindow"));
   createroomlabel =
       GTK_WIDGET(gtk_builder_get_object(builder, "createroomlabel"));
-  // printf("done with the creating 1\n");
   char roomname[20];
   strcpy(roomname, username);
-  // printf("done with the creating 2\n");
   strcat(roomname, "'s room");
   gtk_label_set_text(GTK_LABEL(createroomlabel), (const gchar *)roomname);
   gtk_builder_connect_signals(builder, NULL);
