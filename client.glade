@@ -299,8 +299,8 @@ Waiting for others to finish</property>
             <property name="can-focus">False</property>
           </object>
           <packing>
-            <property name="x">166</property>
-            <property name="y">95</property>
+            <property name="x">177</property>
+            <property name="y">56</property>
           </packing>
         </child>
       </object>
@@ -402,7 +402,7 @@ Waiting for others to finish</property>
         <property name="visible">True</property>
         <property name="can-focus">False</property>
         <child>
-          <object class="GtkLabel">
+          <object class="GtkLabel" id="memberlabel">
             <property name="width-request">440</property>
             <property name="height-request">146</property>
             <property name="visible">True</property>
@@ -420,6 +420,21 @@ Waiting for others to finish</property>
           <packing>
             <property name="x">166</property>
             <property name="y">95</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkButton" id="leaveroomBtn">
+            <property name="label" translatable="yes">Leave room</property>
+            <property name="width-request">100</property>
+            <property name="height-request">55</property>
+            <property name="visible">True</property>
+            <property name="can-focus">True</property>
+            <property name="receives-default">True</property>
+            <signal name="clicked" handler="on_leaveroomBtn_clicked" swapped="no"/>
+          </object>
+          <packing>
+            <property name="x">165</property>
+            <property name="y">148</property>
           </packing>
         </child>
       </object>

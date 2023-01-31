@@ -182,6 +182,17 @@ void createThread(int conn_sock) {
       broadcast_msg_to_all("ACCEPT_JOIN_ROOM_SUCCESSFULLY");
       broadcast_playerinfo_to_all(online_player_list[findUser(joining_player)]);
       broadcast_playerinfo_to_all(online_player_list[findUser(buff)]);
+    } else if (strcmp(buff, "LEAVE_ROOM") == 0) {
+      if (receiveData(conn_sock, buff) == 0)
+        break;
+      char username[20];
+      strcpy(username, buff);
+      if (receiveData(conn_sock, buff) == 0)
+        break;
+      removePlayerFromRoom(username, findRoomByHost(buff));
+      broadcast_msg_to_all("LEAVE_ROOM_SUCCESSFULLY");
+      broadcast_msg_to_all(username);
+      broadcast_msg_to_all(buff);
     } else if (strcmp(buff, "REFUSE_JOIN_ROOM") == 0) {
       if (receiveData(conn_sock, buff) == 0)
         break;
@@ -377,9 +388,6 @@ void main() {
     perror("\nError: ");
     return;
   }
-
-  /* Establish a signal handler to catch SIGCHLD */
-  signal(SIGCHLD, sig_chld);
 
   while (1) {
     sin_size = sizeof(struct sockaddr_in);

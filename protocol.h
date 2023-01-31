@@ -102,6 +102,7 @@ int findRoomByHost(char *username);
 int findRoomBySocket(int socket);
 void createRoom(playerinfo player, int roomnumber);
 void addPlayerToRoom(playerinfo player, int roomnumber);
+void removePlayerFromRoom(char *username, int roomid);
 void deleteRoom(char *username);
 void addPlayerToWaitingList(playerinfo player, int roomid);
 void removePlayerFromWaitingList(char *username, int roomid);

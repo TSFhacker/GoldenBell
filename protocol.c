@@ -140,6 +140,25 @@ void addPlayerToRoom(playerinfo player, int roomid) {
   roomlist[roomid].player_number++;
 }
 
+void removePlayerFromRoom(char *username, int roomid) {
+  for (int i = 0; i < roomlist[roomid].player_number; i++) {
+    if (strcmp(username, roomlist[roomid].list[i].username) == 0) {
+      if (i != roomlist[roomid].player_number - 1) {
+        for (int j = i; j < roomlist[roomid].player_number - 1; j++) {
+          strcpy(roomlist[roomid].list[j].username,
+                 roomlist[roomid].list[j + 1].username);
+          strcpy(roomlist[roomid].list[j].password,
+                 roomlist[roomid].list[j + 1].password);
+          roomlist[roomid].list[j].rank = roomlist[roomid].list[j + 1].rank;
+          roomlist[roomid].list[j].socket = roomlist[roomid].list[j + 1].socket;
+        }
+      }
+      roomlist[roomid].player_number--;
+      break;
+    }
+  }
+}
+
 void deleteRoom(char *username) {
   for (int i = 0; i < room_number; i++) {
     printf("%s %s\n", username, roomlist[i].list[0].username);
