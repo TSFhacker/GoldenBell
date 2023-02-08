@@ -97,6 +97,7 @@ int checkLogin(char *username);
 
 // ham them xoa phong
 int findUser(char *username);
+int findUserBySocket(int socket);
 void addPoint(int socket);
 int findRoomByHost(char *username);
 int findRoomBySocket(int socket);
@@ -107,25 +108,4 @@ void deleteRoom(char *username);
 void addPlayerToWaitingList(playerinfo player, int roomid);
 void removePlayerFromWaitingList(char *username, int roomid);
 
-// int sendMessage(int socket, Response *msg, int size, int flags);
-// int receiveMessage(int socket, Response *msg, int size, int flags);
-
-// // set message response
-// void setMessageResponse(Response *msg);
-// void readMessageResponse(Response *msg);
-
-// //set opcode request
-// void setOpcodeRequest(Request *request, char *input);
-
-// //send question
-// int sendQuestion(int socket, Question *question, int size, int flags);
-// int receiveQuestion(int socket, Question *question, int size, int flags);
-// //send information
-// int sendInformation(int socket, Information *infor, int size, int flags);
-// int receiveInformation(int socket, Information *infor, int size, int flags);
-// //request get
-// void requestGet(int socket);
-// void requestLogout(int socket, char *username);
-// void requestCheckInformation(int socket);
-// void requestGetHelp(int socket);
 #endif

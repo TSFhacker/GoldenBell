@@ -26,10 +26,21 @@ GtkWidget *notiLabel1;
 GtkWidget *usernameEntry;
 GtkWidget *passEntry;
 GtkWidget *loginBtn;
+GtkWidget *signupBtn;
 char username[20];
 char password[20];
+char password2[20];
 gchar *host;
 gchar *joining_player;
+int left_room = 0;
+
+// cua so dang ky
+GtkWidget *signupWindow;
+GtkWidget *usernameEntry2;
+GtkWidget *passEntry2;
+GtkWidget *passEntry3;
+GtkWidget *signupresultlabel;
+GtkWidget *signupBtn2;
 
 // main window
 GtkWidget *mainwindow;
@@ -43,16 +54,28 @@ GtkWidget *startBtn;
 GtkWidget *waitinglistlabel;
 GtkTreeView *playerview;
 GtkTreeView *requestview;
+int start = 0;
 
 // Cua so pop up doi chu phong chap nhan
 GtkWidget *waitingwindow;
 GtkWidget *cancelwaitingBtn;
+
+// Cua so khong vao duoc phong
+GtkWidget *cantjoinwindow;
+GtkWidget *cantjoinlabel;
+GtkWidget *cantjoinBtn;
 
 // Cua so pop up yeu cau vao phong
 GtkWidget *joinrequestdialog;
 GtkWidget *joininfolabel;
 GtkWidget *acceptjoinBtn;
 GtkWidget *refusejoinBtn;
+
+// Cua so xac nhan muon roi phong
+GtkWidget *messageDialog;
+GtkWidget *messageLabel;
+GtkWidget *leaveroomearlyBtn;
+GtkWidget *returntogameBtn;
 
 // cua so doi chu phong bat dau game
 GtkWidget *memberwindow;
@@ -70,6 +93,7 @@ GtkWidget *CBtn;
 // man hinh sau khi tra loi sai
 GtkWidget *loserwindow;
 GtkWidget *finishlabel;
+GtkWidget *leaveroomearlyBtn2;
 
 // man hinh ket qua
 GtkWidget *resultwindow;
@@ -79,12 +103,18 @@ GtkWidget *endgameBtn;
 void on_usernameEntry_changed(GtkEntry *e);
 void on_passEntry_changed(GtkEntry *e);
 void on_loginBtn_clicked();
+void on_logoutBtn_clicked();
+void on_signupBtn2_clicked();
 void on_cancelwaitingBtn_clicked();
 void on_ABtn_clicked();
 void on_BBtn_clicked();
 void on_CBtn_clicked();
 void on_endgameBtn_clicked();
 void on_leaveroomBtn_clicked();
+void on_cantjoinBtn_clicked();
+void on_quizwindow_delete_event();
+void on_leaveroomearlyBtn_clicked();
+void on_returntogameBtn_clicked();
 
 GtkTreeIter curIter;
 GtkTreeIter playerIter;
@@ -95,11 +125,12 @@ GtkTreeModel *create_model() {
   store = gtk_list_store_new(3, G_TYPE_STRING, G_TYPE_INT, G_TYPE_INT);
   for (i = 0; i < room_number; ++i) {
     // printf("room number %d\n", i);
-    gtk_list_store_append(store, &curIter);
-    gtk_list_store_set(store, &curIter, 0, roomlist[i].list[0].username, 1,
-                       roomlist[i].rank, 2, roomlist[i].player_number, -1);
+    if (roomlist[i].state == 1) {
+      gtk_list_store_append(store, &curIter);
+      gtk_list_store_set(store, &curIter, 0, roomlist[i].list[0].username, 1,
+                         roomlist[i].rank, 2, roomlist[i].player_number, -1);
+    }
   }
-  // printf("Done with the setting\n");
   return GTK_TREE_MODEL(store);
 }
 
@@ -128,7 +159,7 @@ void timer(int socket) {
   struct timespec ts;
   ts.tv_sec = 0;
   ts.tv_nsec = 1000000;
-  s = 5;
+  s = 10;
   ms = 0;
   char time[5];
   while (1) {
@@ -151,7 +182,12 @@ void timer(int socket) {
     ms--;
     nanosleep(&ts, &ts);
   }
-  send(socket, "continue", 8, 0);
+  if (left_room == 0) {
+    printf("Still in the room\n");
+    if (sendData(socket, "continue") == 0)
+      printf("Error\n");
+  }
+  left_room = 0;
   pthread_exit(NULL);
 }
 
@@ -169,6 +205,7 @@ void listenAndPrint(int socket) {
       read(client_sock, &player, sizeof(player));
       printf("increasing room: %s\n", player.username);
       createRoom(player, room_number);
+      printf("Current number of room %d\n", room_number);
       gtk_tree_view_set_model(GTK_TREE_VIEW(roomview),
                               GTK_TREE_MODEL(create_model()));
       if (strcmp(username, player.username) == 0) {
@@ -201,20 +238,27 @@ void listenAndPrint(int socket) {
                                 GTK_TREE_MODEL(store));
       }
 
+    } else if (strcmp(buffer, "LOG_OUT_SUCCESSFULLY") == 0) {
+      gtk_widget_destroy(mainwindow);
+      gtk_widget_show(loginWindow);
+      gtk_widget_set_sensitive(loginWindow, TRUE);
+      break;
     } else if (strcmp(buffer, "DELETE_ROOM_SUCCESSFULLY") == 0) {
       if (receiveData(socket, buffer) == 0)
         break;
-      for (int i = 1; i < roomlist[findRoomByHost(buffer)].player_number; i++) {
-        if (strcmp(username,
-                   roomlist[findRoomByHost(buffer)].list[i].username) == 0) {
-          gtk_label_set_text(
-              GTK_LABEL(memberlabel),
-              (const gchar *)"Room has been deleted. Exiting ...");
-          sleep(3);
-          gtk_widget_destroy(memberwindow);
-          gtk_widget_set_sensitive(mainwindow, TRUE);
+      if (start == 0)
+        for (int i = 1; i < roomlist[findRoomByHost(buffer)].player_number;
+             i++) {
+          if (strcmp(username,
+                     roomlist[findRoomByHost(buffer)].list[i].username) == 0) {
+            gtk_label_set_text(
+                GTK_LABEL(memberlabel),
+                (const gchar *)"Room has been deleted. Exiting ...");
+            sleep(3);
+            gtk_widget_destroy(memberwindow);
+            gtk_widget_set_sensitive(mainwindow, TRUE);
+          }
         }
-      }
       deleteRoom(buffer);
       // printf("Current number of rooms: %d\n", room_number);
       gtk_tree_view_set_model(GTK_TREE_VIEW(roomview),
@@ -237,6 +281,30 @@ void listenAndPrint(int socket) {
       }
       gtk_tree_view_set_model(GTK_TREE_VIEW(requestview),
                               GTK_TREE_MODEL(store));
+    } else if (strcmp(buffer, "CAN_JOIN_ROOM") == 0) {
+      builder = gtk_builder_new_from_file("client.glade");
+      waitingwindow =
+          GTK_WIDGET(gtk_builder_get_object(builder, "waitingwindow"));
+      cancelwaitingBtn =
+          GTK_WIDGET(gtk_builder_get_object(builder, "cancelwaitingBtn"));
+      g_signal_connect(cancelwaitingBtn, "clicked",
+                       G_CALLBACK(on_cancelwaitingBtn_clicked), NULL);
+      gtk_widget_show(waitingwindow);
+      gtk_widget_set_sensitive(mainwindow, FALSE);
+    } else if (strcmp(buffer, "CAN_NOT_JOIN") == 0) {
+      if (receiveData(socket, buffer) == 0)
+        break;
+      builder = gtk_builder_new_from_file("client.glade");
+      cantjoinwindow =
+          GTK_WIDGET(gtk_builder_get_object(builder, "cantjoinwindow"));
+      cantjoinBtn = GTK_WIDGET(gtk_builder_get_object(builder, "cantjoinBtn"));
+      cantjoinlabel =
+          GTK_WIDGET(gtk_builder_get_object(builder, "cantjoinlabel"));
+      g_signal_connect(cantjoinBtn, "clicked",
+                       G_CALLBACK(on_cantjoinBtn_clicked), NULL);
+      gtk_label_set_text(GTK_LABEL(cantjoinlabel), (const gchar *)buffer);
+      gtk_widget_show(cantjoinwindow);
+      gtk_widget_set_sensitive(mainwindow, FALSE);
     } else if (strcmp(buffer, "CANCEL_JOIN_ROOM") == 0) {
       if (receiveData(socket, buffer) == 0)
         break;
@@ -298,9 +366,30 @@ void listenAndPrint(int socket) {
         leaveroomBtn =
             GTK_WIDGET(gtk_builder_get_object(builder, "leaveroomBtn"));
         g_signal_connect(leaveroomBtn, "clicked",
-                         G_CALLBACK(on_leaveroomBtn_clicked), "NULL");
+                         G_CALLBACK(on_leaveroomBtn_clicked), NULL);
         gtk_widget_show(memberwindow);
       }
+    } else if (strcmp(buffer, "LEAVE_GAME_SUCCESSFULLY") == 0) {
+      if (receiveData(socket, buffer) == 0)
+        break;
+      char leaving_player[20];
+      strcpy(leaving_player, buffer);
+      if (receiveData(socket, buffer) == 0)
+        break;
+      int on_going;
+      bytes_received = read(socket, &on_going, sizeof(on_going));
+      if (bytes_received <= 0) {
+        break;
+      }
+      on_going = ntohl(on_going);
+      printf("there are %d players remaining\n", on_going);
+      if (on_going == 0)
+        deleteRoom(buffer);
+      else
+        removePlayerFromRoom(leaving_player, findRoomByHost(buffer));
+      gtk_tree_view_set_model(GTK_TREE_VIEW(roomview),
+                              GTK_TREE_MODEL(create_model()));
+      online_player_list[findUser(leaving_player)].rank -= 10;
     } else if (strcmp(buffer, "LEAVE_ROOM_SUCCESSFULLY") == 0) {
       if (receiveData(socket, buffer) == 0)
         break;
@@ -324,7 +413,6 @@ void listenAndPrint(int socket) {
         gtk_tree_view_set_model(GTK_TREE_VIEW(playerview),
                                 GTK_TREE_MODEL(store));
       }
-
     } else if (strcmp(buffer, "REFUSE_JOIN_ROOM_SUCCESSFULLY") == 0) {
       if (receiveData(socket, buffer) == 0)
         break;
@@ -332,21 +420,31 @@ void listenAndPrint(int socket) {
       gtk_widget_destroy(waitingwindow);
       gtk_widget_set_sensitive(mainwindow, TRUE);
     } else if (strcmp(buffer, "START_GAME_SUCCESSFULLY") == 0) {
+      start = 1;
+      current_question = 0;
+      if (receiveData(socket, buffer) == 0)
+        break;
+      roomlist[findRoomByHost(buffer)].state = 0;
+      gtk_tree_view_set_model(GTK_TREE_VIEW(roomview),
+                              GTK_TREE_MODEL(create_model()));
+    } else if (strcmp(buffer, "PLAYING") == 0) {
       gtk_widget_hide(mainwindow);
       gtk_widget_destroy(memberwindow);
       gtk_widget_hide(createroomwindow);
       read(client_sock, &questions[0], sizeof(question));
       builder = gtk_builder_new_from_file("client.glade");
       quizwindow = GTK_WIDGET(gtk_builder_get_object(builder, "quizwindow"));
+      g_signal_connect(quizwindow, "delete-event",
+                       G_CALLBACK(on_quizwindow_delete_event), NULL);
       questionlabel =
           GTK_WIDGET(gtk_builder_get_object(builder, "questionlabel"));
       timerlabel = GTK_WIDGET(gtk_builder_get_object(builder, "timerlabel"));
       ABtn = GTK_WIDGET(gtk_builder_get_object(builder, "ABtn"));
-      g_signal_connect(ABtn, "clicked", G_CALLBACK(on_ABtn_clicked), "NULL");
+      g_signal_connect(ABtn, "clicked", G_CALLBACK(on_ABtn_clicked), NULL);
       BBtn = GTK_WIDGET(gtk_builder_get_object(builder, "BBtn"));
-      g_signal_connect(BBtn, "clicked", G_CALLBACK(on_BBtn_clicked), "NULL");
+      g_signal_connect(BBtn, "clicked", G_CALLBACK(on_BBtn_clicked), NULL);
       CBtn = GTK_WIDGET(gtk_builder_get_object(builder, "CBtn"));
-      g_signal_connect(CBtn, "clicked", G_CALLBACK(on_CBtn_clicked), "NULL");
+      g_signal_connect(CBtn, "clicked", G_CALLBACK(on_CBtn_clicked), NULL);
       char content[500];
       // sprintf(content, "%s\nA: %s\nB: %s\nC: %s", questions[0].content,
       //         questions[0].answer[0], questions[0].answer[1],
@@ -363,17 +461,26 @@ void listenAndPrint(int socket) {
 
       gtk_widget_show(quizwindow);
       if (sendData(socket, "READY_TO_ANSWER") == 0)
-        printf("Error\n");
+        break;
       pthread_t id;
       pthread_create(&id, NULL, (void *)timer, (void *)(intptr_t)client_sock);
     } else if (strcmp(buffer, "CORRECT_ANSWER") == 0) {
+      continue_timer = 1;
+      gtk_label_set_text(GTK_LABEL(timerlabel), (const gchar *)"20");
+      printf("Correct answer\n");
+      current_question++;
       if (current_question == 20) {
-        gtk_widget_destroy(quizwindow);
+        gtk_widget_hide(quizwindow);
+        printf("destroy\n");
         builder = gtk_builder_new_from_file("client.glade");
         loserwindow =
             GTK_WIDGET(gtk_builder_get_object(builder, "loserwindow"));
         finishlabel =
             GTK_WIDGET(gtk_builder_get_object(builder, "finishlabel"));
+        leaveroomearlyBtn2 =
+            GTK_WIDGET(gtk_builder_get_object(builder, "leaveroomearlyBtn2"));
+        g_signal_connect(leaveroomearlyBtn2, "clicked",
+                         G_CALLBACK(on_leaveroomearlyBtn_clicked), NULL);
         // gtk_tree_view_set_model(GTK_TREE_VIEW(roomview),
         //                         GTK_TREE_MODEL(create_model()));
         gtk_label_set_text(
@@ -381,12 +488,8 @@ void listenAndPrint(int socket) {
             (const gchar *)"You have answered all the questions");
         gtk_widget_show(loserwindow);
         if (sendData(socket, "FINISH") == 0)
-          printf("Error\n");
+          break;
       } else {
-        continue_timer = 1;
-        gtk_label_set_text(GTK_LABEL(timerlabel), (const gchar *)"20");
-        printf("Correct answer\n");
-        current_question++;
         gtk_widget_set_sensitive(ABtn, TRUE);
         gtk_widget_set_sensitive(BBtn, TRUE);
         gtk_widget_set_sensitive(CBtn, TRUE);
@@ -403,19 +506,20 @@ void listenAndPrint(int socket) {
             GTK_BUTTON(CBtn),
             (const gchar *)questions[current_question].answer[2]);
         if (sendData(client_sock, "READY_TO_ANSWER") == 0)
-          printf("Error\n");
+          break;
         pthread_t id;
         pthread_create(&id, NULL, (void *)timer, (void *)(intptr_t)client_sock);
       }
 
     } else if (strcmp(buffer, "WRONG_ANSWER") == 0) {
-      gtk_widget_destroy(quizwindow);
+      gtk_widget_hide(quizwindow);
       builder = gtk_builder_new_from_file("client.glade");
       loserwindow = GTK_WIDGET(gtk_builder_get_object(builder, "loserwindow"));
       // gtk_tree_view_set_model(GTK_TREE_VIEW(roomview),
       //                         GTK_TREE_MODEL(create_model()));
       gtk_widget_show(loserwindow);
     } else if (strcmp(buffer, "END_GAME") == 0) {
+      start = 0;
       current_question = 0;
       room a;
       read(socket, &a, sizeof(room));
@@ -426,7 +530,7 @@ void listenAndPrint(int socket) {
       resultview = GTK_TREE_VIEW(gtk_builder_get_object(builder, "resultview"));
       endgameBtn = GTK_WIDGET(gtk_builder_get_object(builder, "endgameBtn"));
       g_signal_connect(endgameBtn, "clicked", G_CALLBACK(on_endgameBtn_clicked),
-                       "NULL");
+                       NULL);
       renderer = gtk_cell_renderer_text_new();
       column1 = gtk_tree_view_column_new_with_attributes("Username", renderer,
                                                          "text", 0, NULL);
@@ -440,20 +544,53 @@ void listenAndPrint(int socket) {
       store = gtk_list_store_new(3, G_TYPE_STRING, G_TYPE_INT, G_TYPE_INT);
       printf("%d\n", a.player_number);
       for (int i = 0; i < a.player_number; ++i) {
-        // printf("room number %d\n", i);
         printf("%s %d %d\n", a.list[i].username, a.list[i].rank,
                a.list[i].correct);
         gtk_list_store_append(store, &curIter);
         gtk_list_store_set(store, &curIter, 0, a.list[i].username, 1,
                            a.list[i].rank, 2, a.list[i].correct, -1);
       }
-      // gtk_widget_destroy(createroomwindow);
       gtk_tree_view_set_model(GTK_TREE_VIEW(resultview), GTK_TREE_MODEL(store));
       gtk_widget_show(resultwindow);
+    } else if (strcmp(buffer, "DISCONNECTED") == 0) {
+      if (receiveData(socket, buffer) == 0)
+        break;
+      for (int i = 0; i < room_number; i++) {
+        if (strcmp(buffer, roomlist[i].list[0].username) == 0)
+          continue;
+        removePlayerFromRoom(buffer, i);
+        removePlayerFromWaitingList(buffer, i);
+      }
+      gtk_tree_view_set_model(GTK_TREE_VIEW(roomview),
+                              GTK_TREE_MODEL(create_model()));
+      store = gtk_list_store_new(2, G_TYPE_STRING, G_TYPE_INT);
+      for (int i = 0; i < roomlist[findRoomByHost(username)].player_number;
+           ++i) {
+        gtk_list_store_append(store, &curIter);
+        gtk_list_store_set(store, &curIter, 0,
+                           roomlist[findRoomByHost(username)].list[i].username,
+                           1, roomlist[findRoomByHost(username)].list[i].rank,
+                           -1);
+      }
+      gtk_tree_view_set_model(GTK_TREE_VIEW(playerview), GTK_TREE_MODEL(store));
+      store = gtk_list_store_new(2, G_TYPE_STRING, G_TYPE_INT);
+      for (int i = 0; i < roomlist[findRoomByHost(username)].waiting_number;
+           ++i) {
+        printf("There are %d people waiting\n",
+               roomlist[findRoomByHost(username)].waiting_number);
+        gtk_list_store_append(store, &curIter);
+        gtk_list_store_set(
+            store, &curIter, 0,
+            roomlist[findRoomByHost(username)].waiting_list[i].username, 1,
+            roomlist[findRoomByHost(username)].waiting_list[i].rank, -1);
+      }
+      gtk_tree_view_set_model(GTK_TREE_VIEW(requestview),
+                              GTK_TREE_MODEL(store));
     } else
-      pthread_exit(NULL);
+      printf("Wrong message\n");
   }
-
+  printf("Logging out\n");
+  pthread_exit(NULL);
   close(socket);
 }
 
@@ -469,14 +606,14 @@ int main(int argc, char *argv[]) {
     return 1;
   }
   server_addr.sin_family = AF_INET;
-  server_addr.sin_port = htons(5551);
+  server_addr.sin_port = htons(5550);
   server_addr.sin_addr.s_addr = inet_addr("127.0.0.1");
 
   // Hien thi man hinh login
   gtk_init(&argc, &argv);
   builder = gtk_builder_new_from_file(argv[1]);
   loginWindow = GTK_WIDGET(gtk_builder_get_object(builder, "loginWindow"));
-  g_signal_connect(loginWindow, "destroy", G_CALLBACK(exit_main), "NULL");
+  g_signal_connect(loginWindow, "destroy", G_CALLBACK(exit_main), NULL);
   gtk_builder_connect_signals(builder, NULL);
 
   notiLabel1 = GTK_WIDGET(gtk_builder_get_object(builder, "notiLabel1"));
@@ -484,18 +621,141 @@ int main(int argc, char *argv[]) {
   gtk_entry_set_visibility(GTK_ENTRY(passEntry), FALSE);
   usernameEntry = GTK_WIDGET(gtk_builder_get_object(builder, "usernameEntry"));
   loginBtn = GTK_WIDGET(gtk_builder_get_object(builder, "loginBtn"));
+  signupBtn = GTK_WIDGET(gtk_builder_get_object(builder, "signupBtn"));
 
   gtk_widget_set_sensitive(loginBtn, FALSE);
+  gtk_window_set_gravity(GTK_WINDOW(loginWindow), GDK_GRAVITY_CENTER);
+  gtk_window_move(GTK_WINDOW(loginWindow), 0, 0);
+
   gtk_widget_show(loginWindow);
   gtk_main();
   return 0;
 }
 
 // Xu ly khi co event:
+
+void on_signupBtn_clicked() {
+  builder = gtk_builder_new_from_file("client.glade");
+  signupWindow = GTK_WIDGET(gtk_builder_get_object(builder, "signupWindow"));
+  usernameEntry2 =
+      GTK_WIDGET(gtk_builder_get_object(builder, "usernameEntry2"));
+  passEntry2 = GTK_WIDGET(gtk_builder_get_object(builder, "passEntry2"));
+  passEntry3 = GTK_WIDGET(gtk_builder_get_object(builder, "passEntry3"));
+  signupresultlabel =
+      GTK_WIDGET(gtk_builder_get_object(builder, "signupresultlabel"));
+  signupBtn2 = GTK_WIDGET(gtk_builder_get_object(builder, "signupBtn2"));
+  g_signal_connect(signupWindow, "destroy", G_CALLBACK(on_logoutBtn_clicked),
+                   NULL);
+  gtk_builder_connect_signals(builder, NULL);
+  gtk_widget_hide(loginWindow);
+  gtk_widget_show(signupWindow);
+}
+
+void on_signupBtn2_clicked() {
+  sprintf(username, "%s", gtk_entry_get_text(GTK_ENTRY(usernameEntry2)));
+  sprintf(password, "%s", gtk_entry_get_text(GTK_ENTRY(passEntry2)));
+  sprintf(password2, "%s", gtk_entry_get_text(GTK_ENTRY(passEntry3)));
+  printf("%s\n", username);
+  if (strcmp(password, password2) != 0)
+    gtk_label_set_text(GTK_LABEL(signupresultlabel),
+                       (const gchar *)"Can't confirm password");
+  else {
+    client_sock = socket(AF_INET, SOCK_STREAM, 0);
+
+    if (connect(client_sock, (struct sockaddr *)&server_addr,
+                sizeof(struct sockaddr)) < 0) {
+      printf("\nError!Cannot connect to server! Client exit immediately!\n");
+      return;
+    }
+    if (sendData(client_sock, "SIGN_UP") == 0)
+      return;
+    if (sendData(client_sock, username) == 0)
+      return;
+    if (sendData(client_sock, password) == 0)
+      return;
+    char result[50];
+    if (receiveData(client_sock, result) == 0)
+      printf("Error");
+    gtk_label_set_text(GTK_LABEL(signupresultlabel), (const gchar *)result);
+    if (strcmp(result, "Sign up successfully") == 0) {
+      sleep(2);
+      if (sendData(client_sock, "LOG_IN") == 0)
+        return;
+      bytes_sent = send(client_sock, username, strlen(username), 0);
+      if (bytes_sent <= 0) {
+        printf("\nConnection closed!\n");
+      }
+      char buff[10];
+      // Doi server nhan duoc username roi moi gui password
+      recv(client_sock, buff, 10, 0);
+      bytes_sent = send(client_sock, password, strlen(password), 0);
+      if (bytes_sent <= 0) {
+        printf("\nConnection closed!\n");
+      }
+      char result[50];
+      if (receiveData(client_sock, result) == 0)
+        printf("Error");
+
+      if (strcmp(result, "Wrong username or password") == 0 ||
+          strcmp(result, "This account has already been logged in") == 0) {
+        gtk_label_set_text(GTK_LABEL(notiLabel1), (const gchar *)result);
+      } else {
+        gtk_widget_hide(loginWindow);
+        bytes_sent = send(client_sock, "ready", 5, 0);
+        if (bytes_sent <= 0) {
+          printf("\nConnection closed!\n");
+        }
+        printf("ready\n");
+        bytes_received = read(client_sock, &room_number, sizeof(room_number));
+        if (bytes_received <= 0) {
+          printf("\nConnection closed!\n");
+        }
+
+        room_number = ntohl(room_number);
+        printf("There are %d rooms\n", room_number);
+
+        for (int i = 0; i < room_number; i++) {
+          bytes_received = read(client_sock, &roomlist[i], sizeof(room));
+          if (bytes_received <= 0) {
+            printf("\nConnection closed!\n");
+          }
+        }
+
+        // Tao ra 1 luong chay song song de lang nghe thong tin tu server
+        pthread_t id;
+        pthread_create(&id, NULL, (void *)listenAndPrint,
+                       (void *)(intptr_t)client_sock);
+
+        // Hien thi man hinh chinh
+        gtk_label_set_text(GTK_LABEL(notiLabel1),
+                           (const gchar *)"Log in successfully");
+        builder = gtk_builder_new_from_file("client.glade");
+        mainwindow = GTK_WIDGET(gtk_builder_get_object(builder, "mainwindow"));
+        g_signal_connect(mainwindow, "destroy",
+                         G_CALLBACK(on_logoutBtn_clicked), NULL);
+        gtk_builder_connect_signals(builder, NULL);
+        logoutBtn = GTK_WIDGET(gtk_builder_get_object(builder, "logoutBtn"));
+        g_signal_connect(logoutBtn, "clicked", G_CALLBACK(on_logoutBtn_clicked),
+                         NULL);
+        roomview = GTK_TREE_VIEW(gtk_builder_get_object(builder, "roomview"));
+
+        printf("showed room info\n");
+        add_room_columns(GTK_TREE_VIEW(roomview));
+        if (room_number > 0) {
+          gtk_tree_view_set_model(GTK_TREE_VIEW(roomview),
+                                  GTK_TREE_MODEL(create_model()));
+        }
+        gtk_widget_set_sensitive(loginWindow, FALSE);
+        gtk_widget_show(mainwindow);
+      }
+      gtk_widget_hide(signupWindow);
+    }
+  }
+}
+
 void on_logoutBtn_clicked() {
-  gtk_widget_destroy(mainwindow);
-  gtk_widget_show(loginWindow);
-  gtk_widget_set_sensitive(loginWindow, TRUE);
+  if (sendData(client_sock, "LOG_OUT") == 0)
+    return;
 }
 
 void on_usernameEntry_changed(GtkEntry *e) {
@@ -519,6 +779,8 @@ void on_loginBtn_clicked() {
   }
 
   // printf("%s\n", username);
+  if (sendData(client_sock, "LOG_IN") == 0)
+    return;
   bytes_sent = send(client_sock, username, strlen(username), 0);
   if (bytes_sent <= 0) {
     printf("\nConnection closed!\n");
@@ -570,11 +832,11 @@ void on_loginBtn_clicked() {
     builder = gtk_builder_new_from_file("client.glade");
     mainwindow = GTK_WIDGET(gtk_builder_get_object(builder, "mainwindow"));
     g_signal_connect(mainwindow, "destroy", G_CALLBACK(on_logoutBtn_clicked),
-                     "NULL");
+                     NULL);
     gtk_builder_connect_signals(builder, NULL);
     logoutBtn = GTK_WIDGET(gtk_builder_get_object(builder, "logoutBtn"));
     g_signal_connect(logoutBtn, "clicked", G_CALLBACK(on_logoutBtn_clicked),
-                     "NULL");
+                     NULL);
     roomview = GTK_TREE_VIEW(gtk_builder_get_object(builder, "roomview"));
 
     printf("showed room info\n");
@@ -632,6 +894,45 @@ void on_cancelwaitingBtn_clicked() {
   gtk_widget_set_sensitive(mainwindow, TRUE);
 }
 
+void on_quizwindow_delete_event() {
+  builder = gtk_builder_new_from_file("client.glade");
+  messageDialog = GTK_WIDGET(gtk_builder_get_object(builder, "messageDialog"));
+  messageLabel = GTK_WIDGET(gtk_builder_get_object(builder, "messageLabel"));
+  leaveroomearlyBtn =
+      GTK_WIDGET(gtk_builder_get_object(builder, "leaveroomearlyBtn"));
+  g_signal_connect(leaveroomearlyBtn, "clicked",
+                   G_CALLBACK(on_leaveroomearlyBtn_clicked), NULL);
+  returntogameBtn =
+      GTK_WIDGET(gtk_builder_get_object(builder, "returntogameBtn"));
+  g_signal_connect(returntogameBtn, "clicked",
+                   G_CALLBACK(on_returntogameBtn_clicked), NULL);
+  gtk_builder_connect_signals(builder, NULL);
+  gtk_widget_show(messageDialog);
+  gtk_widget_set_sensitive(quizwindow, FALSE);
+}
+
+void on_leaveroomearlyBtn_clicked() {
+  gtk_widget_destroy(messageDialog);
+  continue_timer = 0;
+  left_room = 1;
+  if (sendData(client_sock, "leaving") == 0)
+    printf("Error\n");
+  int converted_number = htonl(current_question);
+  write(client_sock, &converted_number, sizeof(converted_number));
+  // if (sendData(client_sock, username) == 0)
+  //   printf("Error\n");
+  // if (sendData(client_sock, (char *)host) == 0)
+  //   printf("Error\n");
+  gtk_widget_show(mainwindow);
+  gtk_widget_set_sensitive(mainwindow, TRUE);
+  gtk_widget_destroy(quizwindow);
+}
+
+void on_returntogameBtn_clicked() {
+  gtk_widget_hide(messageDialog);
+  gtk_widget_set_sensitive(quizwindow, TRUE);
+}
+
 void on_leaveroomBtn_clicked() {
   gtk_widget_destroy(memberwindow);
   if (sendData(client_sock, "LEAVE_ROOM") == 0)
@@ -661,14 +962,11 @@ void on_roomview_row_activated(GtkTreeView *view, GtkTreePath *path,
     printf("Error\n");
   if (sendData(client_sock, username) == 0)
     printf("Error\n");
-  builder = gtk_builder_new_from_file("client.glade");
-  waitingwindow = GTK_WIDGET(gtk_builder_get_object(builder, "waitingwindow"));
-  cancelwaitingBtn =
-      GTK_WIDGET(gtk_builder_get_object(builder, "cancelwaitingBtn"));
-  g_signal_connect(cancelwaitingBtn, "clicked",
-                   G_CALLBACK(on_cancelwaitingBtn_clicked), "NULL");
-  gtk_widget_show(waitingwindow);
-  gtk_widget_set_sensitive(mainwindow, FALSE);
+}
+
+void on_cantjoinBtn_clicked() {
+  gtk_widget_destroy(cantjoinwindow);
+  gtk_widget_set_sensitive(mainwindow, TRUE);
 }
 
 void on_acceptjoinBtn_clicked() {
@@ -719,7 +1017,7 @@ void on_requestview_row_activated(GtkTreeView *view, GtkTreePath *path,
   builder = gtk_builder_new_from_file("client.glade");
   joinrequestdialog =
       GTK_WIDGET(gtk_builder_get_object(builder, "joinrequestdialog"));
-  g_signal_connect(loginWindow, "destroy", G_CALLBACK(gtk_main_quit), "NULL");
+  g_signal_connect(loginWindow, "destroy", G_CALLBACK(gtk_main_quit), NULL);
   gtk_builder_connect_signals(builder, NULL);
   joininfolabel = GTK_WIDGET(gtk_builder_get_object(builder, "joininfolabel"));
   acceptjoinBtn = GTK_WIDGET(gtk_builder_get_object(builder, "acceptjoinBtn"));
@@ -732,6 +1030,8 @@ void on_requestview_row_activated(GtkTreeView *view, GtkTreePath *path,
 }
 void on_startBtn_clicked() {
   printf("Starting the game\n");
+  host = malloc(strlen(username) + 1);
+  strcpy(host, username);
   if (sendData(client_sock, "START_GAME") == 0)
     printf("Error\n");
   if (sendData(client_sock, username) == 0)

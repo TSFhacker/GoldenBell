@@ -2,6 +2,38 @@
 <!-- Generated with glade 3.38.2 -->
 <interface>
   <requires lib="gtk+" version="3.24"/>
+  <object class="GtkWindow" id="cantjoinwindow">
+    <property name="can-focus">False</property>
+    <child>
+      <object class="GtkFixed">
+        <property name="visible">True</property>
+        <property name="can-focus">False</property>
+        <child>
+          <object class="GtkLabel" id="cantjoinlabel">
+            <property name="width-request">440</property>
+            <property name="height-request">136</property>
+            <property name="visible">True</property>
+            <property name="can-focus">False</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkButton" id="cantjoinBtn">
+            <property name="label" translatable="yes">Ok</property>
+            <property name="width-request">100</property>
+            <property name="height-request">51</property>
+            <property name="visible">True</property>
+            <property name="can-focus">True</property>
+            <property name="receives-default">True</property>
+            <signal name="clicked" handler="on_cantjoinBtn_clicked" swapped="no"/>
+          </object>
+          <packing>
+            <property name="x">163</property>
+            <property name="y">140</property>
+          </packing>
+        </child>
+      </object>
+    </child>
+  </object>
   <object class="GtkWindow" id="createroomwindow">
     <property name="can-focus">False</property>
     <signal name="destroy" handler="on_createroomwindow_destroy" swapped="no"/>
@@ -257,7 +289,7 @@
             <signal name="clicked" handler="on_loginBtn_clicked" swapped="no"/>
           </object>
           <packing>
-            <property name="x">318</property>
+            <property name="x">381</property>
             <property name="y">283</property>
           </packing>
         </child>
@@ -270,6 +302,21 @@
           </object>
           <packing>
             <property name="y">52</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkButton" id="signupBtn">
+            <property name="label" translatable="yes">Sign up</property>
+            <property name="width-request">100</property>
+            <property name="height-request">56</property>
+            <property name="visible">True</property>
+            <property name="can-focus">True</property>
+            <property name="receives-default">True</property>
+            <signal name="clicked" handler="on_signupBtn_clicked" swapped="no"/>
+          </object>
+          <packing>
+            <property name="x">255</property>
+            <property name="y">283</property>
           </packing>
         </child>
       </object>
@@ -292,15 +339,17 @@ Waiting for others to finish</property>
           </object>
         </child>
         <child>
-          <object class="GtkSpinner">
-            <property name="width-request">100</property>
-            <property name="height-request">80</property>
+          <object class="GtkButton" id="leaveroomearlyBtn2">
+            <property name="label" translatable="yes">Leave room</property>
+            <property name="width-request">146</property>
+            <property name="height-request">52</property>
             <property name="visible">True</property>
-            <property name="can-focus">False</property>
+            <property name="can-focus">True</property>
+            <property name="receives-default">True</property>
           </object>
           <packing>
-            <property name="x">177</property>
-            <property name="y">56</property>
+            <property name="x">146</property>
+            <property name="y">163</property>
           </packing>
         </child>
       </object>
@@ -440,8 +489,57 @@ Waiting for others to finish</property>
       </object>
     </child>
   </object>
+  <object class="GtkWindow" id="messageDialog">
+    <property name="can-focus">False</property>
+    <child>
+      <object class="GtkFixed">
+        <property name="visible">True</property>
+        <property name="can-focus">False</property>
+        <child>
+          <object class="GtkLabel">
+            <property name="width-request">440</property>
+            <property name="height-request">145</property>
+            <property name="visible">True</property>
+            <property name="can-focus">False</property>
+            <property name="label" translatable="yes">Leaving the room means you will lose and lose 10 rank</property>
+          </object>
+        </child>
+        <child>
+          <object class="GtkButton" id="leaveroomearlyBtn">
+            <property name="label" translatable="yes">Yes</property>
+            <property name="width-request">100</property>
+            <property name="height-request">43</property>
+            <property name="visible">True</property>
+            <property name="can-focus">True</property>
+            <property name="receives-default">True</property>
+            <signal name="clicked" handler="on_leaveroomearlyBtn_clicked" swapped="no"/>
+          </object>
+          <packing>
+            <property name="x">286</property>
+            <property name="y">160</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkButton" id="returntogameBtn">
+            <property name="label" translatable="yes">Cancel</property>
+            <property name="width-request">100</property>
+            <property name="height-request">41</property>
+            <property name="visible">True</property>
+            <property name="can-focus">True</property>
+            <property name="receives-default">True</property>
+            <signal name="clicked" handler="on_returntogameBtn_clicked" swapped="no"/>
+          </object>
+          <packing>
+            <property name="x">385</property>
+            <property name="y">162</property>
+          </packing>
+        </child>
+      </object>
+    </child>
+  </object>
   <object class="GtkWindow" id="quizwindow">
     <property name="can-focus">False</property>
+    <signal name="delete-event" handler="on_quizwindow_delete_event" swapped="no"/>
     <child>
       <object class="GtkFixed">
         <property name="visible">True</property>
@@ -583,6 +681,116 @@ Waiting for others to finish</property>
           </object>
           <packing>
             <property name="y">56</property>
+          </packing>
+        </child>
+      </object>
+    </child>
+  </object>
+  <object class="GtkWindow" id="signupWindow">
+    <property name="can-focus">False</property>
+    <child>
+      <object class="GtkFixed">
+        <property name="visible">True</property>
+        <property name="can-focus">False</property>
+        <child>
+          <object class="GtkEntry" id="usernameEntry2">
+            <property name="width-request">300</property>
+            <property name="height-request">40</property>
+            <property name="visible">True</property>
+            <property name="can-focus">True</property>
+          </object>
+          <packing>
+            <property name="x">160</property>
+            <property name="y">30</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkLabel">
+            <property name="width-request">150</property>
+            <property name="height-request">40</property>
+            <property name="visible">True</property>
+            <property name="can-focus">False</property>
+            <property name="label" translatable="yes">Username</property>
+          </object>
+          <packing>
+            <property name="x">10</property>
+            <property name="y">30</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkLabel">
+            <property name="width-request">150</property>
+            <property name="height-request">40</property>
+            <property name="visible">True</property>
+            <property name="can-focus">False</property>
+            <property name="label" translatable="yes">Password</property>
+          </object>
+          <packing>
+            <property name="x">10</property>
+            <property name="y">80</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkEntry" id="passEntry2">
+            <property name="width-request">300</property>
+            <property name="height-request">40</property>
+            <property name="visible">True</property>
+            <property name="can-focus">True</property>
+          </object>
+          <packing>
+            <property name="x">160</property>
+            <property name="y">80</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkLabel">
+            <property name="width-request">150</property>
+            <property name="height-request">40</property>
+            <property name="visible">True</property>
+            <property name="can-focus">False</property>
+            <property name="label" translatable="yes">Confirm password</property>
+          </object>
+          <packing>
+            <property name="x">10</property>
+            <property name="y">130</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkEntry" id="passEntry3">
+            <property name="width-request">300</property>
+            <property name="height-request">40</property>
+            <property name="visible">True</property>
+            <property name="can-focus">True</property>
+          </object>
+          <packing>
+            <property name="x">160</property>
+            <property name="y">130</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkLabel" id="signupresultlabel">
+            <property name="width-request">460</property>
+            <property name="height-request">50</property>
+            <property name="visible">True</property>
+            <property name="can-focus">False</property>
+          </object>
+          <packing>
+            <property name="y">180</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkButton" id="signupBtn2">
+            <property name="label" translatable="yes">Sign up</property>
+            <property name="width-request">100</property>
+            <property name="height-request">40</property>
+            <property name="visible">True</property>
+            <property name="can-focus">True</property>
+            <property name="receives-default">True</property>
+            <signal name="clicked" handler="on_signupBtn2_clicked" swapped="no"/>
+          </object>
+          <packing>
+            <property name="x">180</property>
+            <property name="y">230</property>
           </packing>
         </child>
       </object>

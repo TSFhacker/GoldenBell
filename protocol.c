@@ -123,7 +123,7 @@ void createRoom(playerinfo player, int roomnumber) {
   roomlist[room_number].list[0].rank = player.rank;
   roomlist[room_number].list[0].socket = player.socket;
   roomlist[room_number].rank = player.rank;
-  roomlist[room_number].state = 0;
+  roomlist[room_number].state = 1;
   roomlist[room_number].waiting_number = 0;
   roomlist[room_number].player_number = 1;
   roomlist[room_number].id = roomnumber;
