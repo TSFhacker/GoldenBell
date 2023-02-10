@@ -31,7 +31,6 @@ void broadcast_msg_to_all(char *msg) {
 
 // truyen thong tin nguoi choi
 void broadcast_playerinfo(playerinfo player, int socket) {
-  // printf("%s\n", msg);
   for (int i = 0; i < online_number; i++) {
     if (online_player_list[i].socket == socket)
       continue;
@@ -41,7 +40,6 @@ void broadcast_playerinfo(playerinfo player, int socket) {
 
 // truyen thong tin nguoi choi cho tat ca client
 void broadcast_playerinfo_to_all(playerinfo player) {
-  // printf("%s\n", msg);
   for (int i = 0; i < online_number; i++) {
     write(online_player_list[i].socket, &player, sizeof(player));
   }
@@ -55,7 +53,7 @@ void createThread(int conn_sock) {
   while (1) {
     if (receiveData(conn_sock, buff) == 0)
       pthread_exit(NULL);
-    printf("from client: %s\n", buff);
+    printf("From client: %s\n", buff);
     if (strcmp(buff, "LOG_IN") == 0) {
       char username[50];
       char password[50];
@@ -97,6 +95,8 @@ void createThread(int conn_sock) {
         for (int i = 0; i < room_number; i++) {
           write(conn_sock, &roomlist[i], sizeof(room));
         }
+        converted_number = htonl(online_player_list[findUser(username)].rank);
+        write(conn_sock, &converted_number, sizeof(converted_number));
         break;
       }
     } else if (strcmp(buff, "SIGN_UP") == 0) {
@@ -161,9 +161,6 @@ void createThread(int conn_sock) {
       if (strcmp(prvs_mess, "READY_TO_ANSWER") == 0) {
         printf("Handling disconnection\n");
         roomlist[findRoomBySocket(conn_sock)].on_going_number--;
-        printf("remaining people %d in room %d\n",
-               roomlist[findRoomBySocket(conn_sock)].on_going_number,
-               findRoomBySocket(conn_sock));
         MYSQL *con = mysql_init(NULL);
         if (con == NULL) {
           fprintf(stderr, "%s\n", mysql_error(con));
@@ -192,7 +189,6 @@ void createThread(int conn_sock) {
                      player_list[i].username) == 0)
             player_list[i].rank -= 10;
         }
-        printf("%d\n", online_player_list[findUserBySocket(conn_sock)].rank);
         broadcast_msg_to_all("LEAVE_GAME_SUCCESSFULLY");
         broadcast_msg_to_all(
             online_player_list[findUserBySocket(conn_sock)].username);
@@ -251,23 +247,18 @@ void createThread(int conn_sock) {
       break;
     }
     strcpy(prvs_mess, buff);
-    printf("from client: %s\n", buff);
+    printf("From client: %s\n", buff);
     if (strcmp(buff, "CREATE_ROOM") == 0) {
       if (receiveData(conn_sock, buff) == 0)
         break;
       char username[20];
       strcpy(username, buff);
-      printf("%s\n", username);
-      // printf("%s\n", player_list[findUser(username)].username);
       createRoom(online_player_list[findUser(username)], room_number);
-      printf("%d\n", room_number);
       if (sendData(conn_sock, "CREATE_ROOM_SUCCESSFULLY") == 0)
         break;
       broadcast_msg("CREATE_ROOM_SUCCESSFULLY", conn_sock);
       write(conn_sock, &online_player_list[findUser(username)],
             sizeof(playerinfo));
-      // for (int i = 0; i < online_number; i++)
-      //   printf("%d\n", online_player_list[i].rank);
       broadcast_playerinfo(online_player_list[findUser(username)], conn_sock);
     } else if (strcmp(buff, "LOG_OUT") == 0) {
       if (sendData(conn_sock, "LOG_OUT_SUCCESSFULLY") == 0)
@@ -308,7 +299,6 @@ void createThread(int conn_sock) {
       if (receiveData(conn_sock, buff) == 0)
         break;
       if (roomlist[findRoomByHost(host)].player_number >= 20) {
-        printf("Room is full!\n");
         if (sendData(conn_sock, "CAN_NOT_JOIN") == 0)
           break;
         if (sendData(conn_sock, "Room is full") == 0)
@@ -321,8 +311,14 @@ void createThread(int conn_sock) {
         if (sendData(conn_sock, "Room rank is below yours") == 0)
           break;
         continue;
+      } else if (online_player_list[findUser(buff)].rank <=
+                 roomlist[findRoomByHost(host)].rank - 500) {
+        if (sendData(conn_sock, "CAN_NOT_JOIN") == 0)
+          break;
+        if (sendData(conn_sock, "This room is too advanced") == 0)
+          break;
+        continue;
       } else {
-        printf("%s\n", buff);
         if (sendData(conn_sock, "CAN_JOIN_ROOM") == 0)
           break;
         addPlayerToWaitingList(online_player_list[findUser(buff)],
@@ -384,7 +380,6 @@ void createThread(int conn_sock) {
       broadcast_msg_to_all("REFUSE_JOIN_ROOM_SUCCESSFULLY");
       broadcast_msg_to_all(joining_player);
     } else if (strcmp(buff, "START_GAME") == 0) {
-      printf("%d\n", room_number);
       if (receiveData(conn_sock, buff) == 0)
         break;
       roomlist[findRoomByHost(buff)].on_going_number =
@@ -395,15 +390,20 @@ void createThread(int conn_sock) {
         if (sendData(roomlist[findRoomByHost(buff)].list[i].socket,
                      "PLAYING") == 0)
           break;
-        write(roomlist[findRoomByHost(buff)].list[i].socket, &questions[0],
-              sizeof(question));
+        if (roomlist[findRoomByHost(buff)].rank <= 500)
+          write(roomlist[findRoomByHost(buff)].list[i].socket, &questions[0],
+                sizeof(question));
+        else if (roomlist[findRoomByHost(buff)].rank > 500 &&
+                 roomlist[findRoomByHost(buff)].rank <= 2000)
+          write(roomlist[findRoomByHost(buff)].list[i].socket,
+                &intermediate_questions[0], sizeof(question));
+        else
+          write(roomlist[findRoomByHost(buff)].list[i].socket,
+                &advanced_questions[0], sizeof(question));
         roomlist[findRoomBySocket(conn_sock)].list[i].correct = 0;
       }
-      printf("waiting\n");
     } else if (strcmp(buff, "READY_TO_ANSWER") == 0) {
-      // printf("%d\n", room_number);
       int n = receiveData(conn_sock, buff);
-      printf("%s\n", buff);
       char ans[10];
       strcpy(ans, buff);
       int ques_no;
@@ -415,9 +415,7 @@ void createThread(int conn_sock) {
       if (strcmp(ans, "leaving") != 0) {
         if (receiveData(conn_sock, buff) == 0)
           continue;
-        printf("continue or leave?: %s", buff);
         if (strcmp(buff, "leaving") == 0) {
-          printf("leaving after picking\n");
           bytes_received = read(conn_sock, &ques_no, sizeof(ques_no));
           if (bytes_received <= 0) {
             continue;
@@ -429,27 +427,52 @@ void createThread(int conn_sock) {
       if (n == 0) {
         continue;
       } else {
+        char correct_answer[100];
+        char answer1[100];
+        char answer2[100];
+        char answer3[100];
+        if (roomlist[findRoomBySocket(conn_sock)].rank <= 500) {
+          strcpy(correct_answer, questions[ques_no].correct_answer);
+          strcpy(answer1, questions[ques_no].answer[0]);
+          strcpy(answer2, questions[ques_no].answer[1]);
+          strcpy(answer3, questions[ques_no].answer[2]);
+        } else if (roomlist[findRoomBySocket(conn_sock)].rank > 500 &&
+                   roomlist[findRoomBySocket(conn_sock)].rank <= 2000) {
+          strcpy(correct_answer,
+                 intermediate_questions[ques_no].correct_answer);
+          strcpy(answer1, intermediate_questions[ques_no].answer[0]);
+          strcpy(answer2, intermediate_questions[ques_no].answer[1]);
+          strcpy(answer3, intermediate_questions[ques_no].answer[2]);
+        } else {
+          strcpy(correct_answer, advanced_questions[ques_no].correct_answer);
+          strcpy(answer1, advanced_questions[ques_no].answer[0]);
+          strcpy(answer2, advanced_questions[ques_no].answer[1]);
+          strcpy(answer3, advanced_questions[ques_no].answer[2]);
+        }
         if (((strcmp(ans, "PickA") == 0 &&
-              strcmp(questions[ques_no].answer[0],
-                     questions[ques_no].correct_answer) == 0) ||
+              strcmp(answer1, correct_answer) == 0) ||
              (strcmp(ans, "PickB") == 0 &&
-              strcmp(questions[ques_no].answer[1],
-                     questions[ques_no].correct_answer) == 0) ||
+              strcmp(answer2, correct_answer) == 0) ||
              (strcmp(ans, "PickC") == 0 &&
-              strcmp(questions[ques_no].answer[2],
-                     questions[ques_no].correct_answer) == 0)) &&
+              strcmp(answer3, correct_answer) == 0)) &&
             strcmp(buff, "leaving") != 0) {
           if (sendData(conn_sock, "CORRECT_ANSWER") == 0)
             break;
           ques_no++;
-          write(conn_sock, &questions[ques_no], sizeof(question));
+          if (ques_no != 20) {
+            if (roomlist[findRoomBySocket(conn_sock)].rank <= 500)
+              write(conn_sock, &questions[ques_no], sizeof(question));
+            else if (roomlist[findRoomBySocket(conn_sock)].rank > 500 &&
+                     roomlist[findRoomBySocket(conn_sock)].rank <= 2000)
+              write(conn_sock, &intermediate_questions[ques_no],
+                    sizeof(question));
+            else
+              write(conn_sock, &advanced_questions[ques_no], sizeof(question));
+          }
           addPoint(conn_sock);
         } else if (strcmp(ans, "leaving") == 0 ||
                    strcmp(buff, "leaving") == 0) {
           roomlist[findRoomBySocket(conn_sock)].on_going_number--;
-          printf("remaining people %d in room %d\n",
-                 roomlist[findRoomBySocket(conn_sock)].on_going_number,
-                 findRoomBySocket(conn_sock));
           MYSQL *con = mysql_init(NULL);
           if (con == NULL) {
             fprintf(stderr, "%s\n", mysql_error(con));
@@ -479,7 +502,6 @@ void createThread(int conn_sock) {
                        player_list[i].username) == 0)
               player_list[i].rank -= 10;
           }
-          printf("%d\n", online_player_list[findUserBySocket(conn_sock)].rank);
           broadcast_msg_to_all("LEAVE_GAME_SUCCESSFULLY");
           broadcast_msg_to_all(
               online_player_list[findUserBySocket(conn_sock)].username);
@@ -509,14 +531,107 @@ void createThread(int conn_sock) {
           if (sendData(conn_sock, "WRONG_ANSWER") == 0)
             break;
           roomlist[findRoomBySocket(conn_sock)].on_going_number--;
-          printf("remaining people %d\n",
-                 roomlist[findRoomBySocket(conn_sock)].on_going_number);
-          // printf("%d %s\n",
-          //        roomlist[findRoomBySocket(conn_sock)].on_going_number,
-          //        roomlist[findRoomBySocket(conn_sock)].list[0].username);
           if (roomlist[findRoomBySocket(conn_sock)].on_going_number == 0) {
+            int point_count = calculatePoint(findRoomBySocket(conn_sock));
+            for (int i = 0; i < point_count; i++)
+              if (point_count == 1) {
+                for (int i = 0;
+                     i < roomlist[findRoomBySocket(conn_sock)].player_number;
+                     i++)
+                  roomlist[findRoomBySocket(conn_sock)].list[i].point = 0;
+              } else if (point_count == 2) {
+                for (int i = 0;
+                     i < roomlist[findRoomBySocket(conn_sock)].player_number;
+                     i++) {
+                  if (roomlist[findRoomBySocket(conn_sock)].list[i].correct ==
+                      roomlist[findRoomBySocket(conn_sock)].pointlist[0])
+                    roomlist[findRoomBySocket(conn_sock)].list[i].point = -5;
+                  else
+                    roomlist[findRoomBySocket(conn_sock)].list[i].point = 5;
+                }
+              } else if (point_count >= 3 && point_count <= 9) {
+                for (int i = 0;
+                     i < roomlist[findRoomBySocket(conn_sock)].player_number;
+                     i++) {
+                  for (int j = 0; j < point_count; j++) {
+                    if (roomlist[findRoomBySocket(conn_sock)].list[i].correct ==
+                        roomlist[findRoomBySocket(conn_sock)].pointlist[j]) {
+                      if (j <= point_count / 3 - 1)
+                        roomlist[findRoomBySocket(conn_sock)].list[i].point =
+                            -5;
+                      else if (j > point_count / 3 - 1 &&
+                               j <= point_count * 2 / 3 - 1)
+                        roomlist[findRoomBySocket(conn_sock)].list[i].point = 0;
+                      else
+                        roomlist[findRoomBySocket(conn_sock)].list[i].point = 5;
+                      break;
+                    }
+                  }
+                }
+              } else if (point_count >= 10 && point_count <= 20) {
+                for (int i = 0;
+                     i < roomlist[findRoomBySocket(conn_sock)].player_number;
+                     i++) {
+                  for (int j = 0; j < point_count; j++) {
+                    if (roomlist[findRoomBySocket(conn_sock)].list[i].correct ==
+                        roomlist[findRoomBySocket(conn_sock)].pointlist[j]) {
+                      if (j <= point_count / 5 - 1)
+                        roomlist[findRoomBySocket(conn_sock)].list[i].point =
+                            -10;
+                      else if (j > point_count / 5 - 1 &&
+                               j <= point_count * 2 / 5 - 1)
+                        roomlist[findRoomBySocket(conn_sock)].list[i].point =
+                            -5;
+                      else if (j > point_count * 2 / 5 - 1 &&
+                               j <= point_count * 3 / 5 - 1)
+                        roomlist[findRoomBySocket(conn_sock)].list[i].point = 0;
+                      else if (j > point_count * 3 / 5 - 1 &&
+                               j <= point_count * 4 / 5 - 1)
+                        roomlist[findRoomBySocket(conn_sock)].list[i].point = 5;
+                      else
+                        roomlist[findRoomBySocket(conn_sock)].list[i].point =
+                            10;
+                      break;
+                    }
+                  }
+                }
+              }
+            MYSQL *con = mysql_init(NULL);
+            if (con == NULL) {
+              fprintf(stderr, "%s\n", mysql_error(con));
+              exit(1);
+            }
+
+            if (mysql_real_connect(con, "localhost", "root", "root",
+                                   "golden-bell", 0, NULL, 0) == NULL) {
+              fprintf(stderr, "%s\n", mysql_error(con));
+              mysql_close(con);
+              exit(1);
+            }
             for (int i = 0;
                  i < roomlist[findRoomBySocket(conn_sock)].player_number; i++) {
+              char query[500];
+              sprintf(query,
+                      "UPDATE players SET player_rank = %d WHERE (account = "
+                      "'%s')",
+                      roomlist[findRoomBySocket(conn_sock)].list[i].rank +
+                          roomlist[findRoomBySocket(conn_sock)].list[i].point,
+                      roomlist[findRoomBySocket(conn_sock)].list[i].username);
+              online_player_list[findUser(roomlist[findRoomBySocket(conn_sock)]
+                                              .list[i]
+                                              .username)]
+                  .rank += roomlist[findRoomBySocket(conn_sock)].list[i].point;
+              for (int i = 0; i < number_of_info; i++) {
+                if (roomlist[findRoomBySocket(conn_sock)].list[i].username,
+                    player_list[i].username == 0)
+                  player_list[i].rank +=
+                      roomlist[findRoomBySocket(conn_sock)].list[i].point;
+              }
+              if (mysql_query(con, query)) {
+                fprintf(stderr, "%s\n", mysql_error(con));
+                mysql_close(con);
+                exit(1);
+              }
               if (sendData(roomlist[findRoomBySocket(conn_sock)].list[i].socket,
                            "END_GAME") == 0)
                 break;
@@ -527,11 +642,15 @@ void createThread(int conn_sock) {
             broadcast_msg_to_all(
                 roomlist[findRoomBySocket(conn_sock)].list[0].username);
             deleteRoom(roomlist[findRoomBySocket(conn_sock)].list[0].username);
+            mysql_close(con);
           }
         }
       }
     } else if (strcmp(buff, "FINISH") == 0) {
+      printf("Someone has finished the game\n");
       roomlist[findRoomBySocket(conn_sock)].on_going_number--;
+      printf("On going: %d\n",
+             roomlist[findRoomBySocket(conn_sock)].on_going_number);
       if (roomlist[findRoomBySocket(conn_sock)].on_going_number == 0) {
         for (int i = 0; i < roomlist[findRoomBySocket(conn_sock)].player_number;
              i++) {
@@ -540,6 +659,7 @@ void createThread(int conn_sock) {
             break;
           write(roomlist[findRoomBySocket(conn_sock)].list[i].socket,
                 &roomlist[findRoomBySocket(conn_sock)], sizeof(room));
+          printf("DOne sending\n");
         }
         broadcast_msg_to_all("DELETE_ROOM_SUCCESSFULLY");
         broadcast_msg_to_all(
@@ -589,7 +709,8 @@ void main() {
                   "INNER JOIN answers answer1 on "
                   "questions.question_id = answer1.question_id\n"
                   "INNER JOIN answers answer2 on "
-                  "questions.answer_id = answer2.answer_id")) {
+                  "questions.answer_id = answer2.answer_id\n"
+                  "WHERE questions.difficulty = 1")) {
     fprintf(stderr, "%s\n", mysql_error(con));
     mysql_close(con);
     exit(1);
@@ -604,6 +725,62 @@ void main() {
       strcpy(questions[question_number / 3].correct_answer, row[2]);
     }
     strcpy(questions[question_number / 3].answer[question_number % 3], row[1]);
+    question_number++;
+  }
+
+  question_number = 0;
+  if (mysql_query(con,
+                  "SELECT questions.content, answer1.content, answer2.content\n"
+                  "FROM questions\n"
+                  "INNER JOIN answers answer1 on "
+                  "questions.question_id = answer1.question_id\n"
+                  "INNER JOIN answers answer2 on "
+                  "questions.answer_id = answer2.answer_id\n"
+                  "WHERE questions.difficulty = 2")) {
+    fprintf(stderr, "%s\n", mysql_error(con));
+    mysql_close(con);
+    exit(1);
+  }
+
+  result = mysql_store_result(con);
+  num_fields = mysql_num_fields(result);
+
+  while ((row = mysql_fetch_row(result))) {
+    if (question_number % 3 == 0) {
+      strcpy(intermediate_questions[question_number / 3].content, row[0]);
+      strcpy(intermediate_questions[question_number / 3].correct_answer,
+             row[2]);
+    }
+    strcpy(
+        intermediate_questions[question_number / 3].answer[question_number % 3],
+        row[1]);
+    question_number++;
+  }
+
+  question_number = 0;
+  if (mysql_query(con,
+                  "SELECT questions.content, answer1.content, answer2.content\n"
+                  "FROM questions\n"
+                  "INNER JOIN answers answer1 on "
+                  "questions.question_id = answer1.question_id\n"
+                  "INNER JOIN answers answer2 on "
+                  "questions.answer_id = answer2.answer_id\n"
+                  "WHERE questions.difficulty = 3")) {
+    fprintf(stderr, "%s\n", mysql_error(con));
+    mysql_close(con);
+    exit(1);
+  }
+
+  result = mysql_store_result(con);
+  num_fields = mysql_num_fields(result);
+
+  while ((row = mysql_fetch_row(result))) {
+    if (question_number % 3 == 0) {
+      strcpy(advanced_questions[question_number / 3].content, row[0]);
+      strcpy(advanced_questions[question_number / 3].correct_answer, row[2]);
+    }
+    strcpy(advanced_questions[question_number / 3].answer[question_number % 3],
+           row[1]);
     question_number++;
   }
 

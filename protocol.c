@@ -15,6 +15,8 @@ room roomlist[50];
 playerinfo player_list[100];
 playerinfo online_player_list[20];
 question questions[30];
+question intermediate_questions[30];
+question advanced_questions[30];
 int question_number = 0;
 int current_question = 0;
 
@@ -126,6 +128,7 @@ void createRoom(playerinfo player, int roomnumber) {
   roomlist[room_number].state = 1;
   roomlist[room_number].waiting_number = 0;
   roomlist[room_number].player_number = 1;
+  roomlist[room_number].different_points_number = 0;
   roomlist[room_number].id = roomnumber;
   room_number++;
 }
@@ -151,6 +154,9 @@ void removePlayerFromRoom(char *username, int roomid) {
                  roomlist[roomid].list[j + 1].password);
           roomlist[roomid].list[j].rank = roomlist[roomid].list[j + 1].rank;
           roomlist[roomid].list[j].socket = roomlist[roomid].list[j + 1].socket;
+          roomlist[roomid].list[j].correct =
+              roomlist[roomid].list[j + 1].correct;
+          roomlist[roomid].list[j].point = roomlist[roomid].list[j + 1].point;
         }
       }
       roomlist[roomid].player_number--;
@@ -173,11 +179,25 @@ void deleteRoom(char *username) {
             roomlist[j].list[k].rank = roomlist[j + 1].list[k].rank;
             roomlist[j].list[k].socket = roomlist[j + 1].list[k].socket;
           }
+          for (int k = 0; k < roomlist[j + 1].waiting_number; k++) {
+            strcpy(roomlist[j].waiting_list[k].username,
+                   roomlist[j + 1].waiting_list[k].username);
+            strcpy(roomlist[j].waiting_list[k].password,
+                   roomlist[j + 1].waiting_list[k].password);
+            roomlist[j].waiting_list[k].rank =
+                roomlist[j + 1].waiting_list[k].rank;
+            roomlist[j].waiting_list[k].socket =
+                roomlist[j + 1].waiting_list[k].socket;
+          }
+          for (int k = 0; k < roomlist[j + 1].different_points_number; k++)
+            roomlist[j].pointlist[k] = roomlist[j + 1].pointlist[k];
           roomlist[j].rank = roomlist[j + 1].rank;
           roomlist[j].state = roomlist[j + 1].state;
           roomlist[j].player_number = roomlist[j + 1].player_number;
           roomlist[j].waiting_number = roomlist[j + 1].waiting_number;
           roomlist[j].on_going_number = roomlist[j + 1].on_going_number;
+          roomlist[j].different_points_number =
+              roomlist[j + 1].different_points_number;
         }
       }
       room_number--;
@@ -219,4 +239,38 @@ void removePlayerFromWaitingList(char *username, int roomid) {
       break;
     }
   }
+}
+
+int calculatePoint(int roomid) {
+  int count = 1;
+  int count2 = 0;
+  for (int i = 0; i < roomlist[roomid].player_number; i++) {
+    if (i == 0)
+      roomlist[roomid].pointlist[i] = roomlist[roomid].list[i].correct;
+    else {
+      for (int j = 0; j < count; j++) {
+        if (roomlist[roomid].pointlist[j] == roomlist[roomid].list[i].correct) {
+          count2++;
+          break;
+        }
+      }
+      if (count2 == 0) {
+        roomlist[roomid].pointlist[count] = roomlist[roomid].list[i].correct;
+        count++;
+      }
+    }
+  }
+  int temp;
+  int i, j;
+  for (i = 0; i < count - 1; i++) {
+    for (j = 0; j < count - 1 - i; j++) {
+      if (roomlist[roomid].pointlist[j] > roomlist[roomid].pointlist[j + 1]) {
+        temp = roomlist[roomid].pointlist[j];
+        roomlist[roomid].pointlist[j] = roomlist[roomid].pointlist[j + 1];
+        roomlist[roomid].pointlist[j + 1] = temp;
+      }
+    }
+  }
+  roomlist[roomid].different_points_number = count;
+  return count;
 }

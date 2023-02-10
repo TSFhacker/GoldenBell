@@ -346,6 +346,7 @@ Waiting for others to finish</property>
             <property name="visible">True</property>
             <property name="can-focus">True</property>
             <property name="receives-default">True</property>
+            <signal name="clicked" handler="on_leaveroomearlyBtn2_clicked" swapped="no"/>
           </object>
           <packing>
             <property name="x">146</property>
@@ -363,7 +364,7 @@ Waiting for others to finish</property>
         <property name="can-focus">False</property>
         <child>
           <object class="GtkLabel" id="mainlabel">
-            <property name="width-request">482</property>
+            <property name="width-request">483</property>
             <property name="height-request">50</property>
             <property name="visible">True</property>
             <property name="can-focus">False</property>
@@ -373,20 +374,21 @@ Waiting for others to finish</property>
         <child>
           <object class="GtkButton" id="logoutBtn">
             <property name="label" translatable="yes">Log out</property>
-            <property name="width-request">84</property>
+            <property name="width-request">120</property>
             <property name="height-request">50</property>
             <property name="visible">True</property>
             <property name="can-focus">True</property>
             <property name="receives-default">True</property>
           </object>
           <packing>
-            <property name="x">399</property>
+            <property name="x">117</property>
+            <property name="y">500</property>
           </packing>
         </child>
         <child>
           <object class="GtkButton" id="createroomBtn">
             <property name="label" translatable="yes">Create room</property>
-            <property name="width-request">119</property>
+            <property name="width-request">120</property>
             <property name="height-request">50</property>
             <property name="visible">True</property>
             <property name="can-focus">True</property>
@@ -394,7 +396,7 @@ Waiting for others to finish</property>
             <signal name="clicked" handler="on_createroomBtn_clicked" swapped="no"/>
           </object>
           <packing>
-            <property name="x">177</property>
+            <property name="x">239</property>
             <property name="y">500</property>
           </packing>
         </child>
@@ -546,7 +548,7 @@ Waiting for others to finish</property>
         <property name="can-focus">False</property>
         <child>
           <object class="GtkLabel" id="questionlabel">
-            <property name="width-request">354</property>
+            <property name="width-request">440</property>
             <property name="height-request">146</property>
             <property name="visible">True</property>
             <property name="can-focus">False</property>

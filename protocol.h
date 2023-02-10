@@ -11,6 +11,7 @@ typedef struct player {
   int rank;
   int socket;
   int correct;
+  int point;
 } playerinfo;
 
 typedef struct room {
@@ -22,6 +23,8 @@ typedef struct room {
   int rank;
   int id;
   int state; // 0 la dang choi, 1 la chua choi
+  int pointlist[20];
+  int different_points_number;
 } room;
 
 typedef struct question {
@@ -37,6 +40,8 @@ extern playerinfo player_list[100];
 extern int number_of_info;
 extern playerinfo online_player_list[20];
 extern question questions[30];
+extern question intermediate_questions[30];
+extern question advanced_questions[30];
 extern int question_number;
 extern int current_question;
 
@@ -107,5 +112,6 @@ void removePlayerFromRoom(char *username, int roomid);
 void deleteRoom(char *username);
 void addPlayerToWaitingList(playerinfo player, int roomid);
 void removePlayerFromWaitingList(char *username, int roomid);
+int calculatePoint(int roomid);
 
 #endif
